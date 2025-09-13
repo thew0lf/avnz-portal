@@ -1,0 +1,58 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: avnzr_portal
+    ports: ["5432:5432"]
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+
+  api:
+    build: ./apps/api
+    depends_on: [db]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/avnzr_portal}
+      PGSSL: ${PGSSL:-}
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+    ports: ["3001:3001"]
+    volumes:
+      - ./apps/api:/app
+      - ./db/init:/db/init
+    command: sh -c "npm ci || npm i && npm run build && node dist/migrate.js && node dist/main.js"
+
+  ai:
+    build: ./apps/ai
+    depends_on: [db]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/avnzr_portal}
+      PGSSL: ${PGSSL:-}
+      USE_BEDROCK: ${USE_BEDROCK:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_PROJECT: ${OPENAI_PROJECT:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+    ports: ["8000:8000"]
+    volumes:
+      - ./apps/ai:/app
+
+  web:
+    build: ./apps/web
+    depends_on: [api]
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://api:3001}
+      NEXT_PUBLIC_AI_BASE: ${NEXT_PUBLIC_AI_BASE:-http://ai:8000}
+      API_BASE: ${API_BASE:-http://api:3001}
+      AI_BASE: ${AI_BASE:-http://ai:8000}
+      NEXT_TELEMETRY_DISABLED: "1"
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      DEMO_USERS: ${DEMO_USERS:-}
+    ports: ["3000:3000"]
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    command: sh -lc "npm ci || npm i && npm run dev"
+
+volumes:
+  dbdata:
