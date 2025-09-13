@@ -11,7 +11,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Controller, Get, Post, Delete, Body, Param, Req, BadRequestException, ForbiddenException } from "@nestjs/common";
-import { pool } from "./db.js";
+import { getClientForReq } from "./db.js";
 let PricingController = class PricingController {
     async test(req) {
         const ctx = req.auth || {};
@@ -32,7 +32,7 @@ let PricingController = class PricingController {
         return { provider, model, tokens: { in: inTok, out: outTok, embed: embTok }, unit: { input: unitIn, output: unitOut, embed: unitEmb }, cost_usd: Number(cost.toFixed(6)) };
     }
     async unitPrice(provider, model, metric, orgId, userId, roles = []) {
-        const client = await pool.connect();
+        const client = await getClientForReq({ auth: { orgUUID: orgId } });
         try {
             if (userId) {
                 const { rows } = await client.query(`select price_per_1k from pricing_rules where scope='user' and user_id=$1 and provider=$2 and model=$3 and metric=$4 and active=true and deleted_at is null limit 1`, [userId, provider, model, metric]);
@@ -61,7 +61,7 @@ let PricingController = class PricingController {
         }
     }
     async list(req) { const ctx = req.auth || {}; const org = ctx.orgUUID || ctx.orgId; if (!org)
-        throw new BadRequestException("org required"); const client = await pool.connect(); try {
+        throw new BadRequestException("org required"); const client = await getClientForReq(req); try {
         const { rows } = await client.query("select * from pricing_rules where deleted_at is null order by scope, provider, model, metric");
         return { rows };
     }
@@ -79,7 +79,7 @@ let PricingController = class PricingController {
         const { scope, org_id, role, user_id, provider, model, metric, price_per_1k, currency = 'USD', active = true } = body || {};
         if (!scope || !provider || !model || !metric || price_per_1k == null)
             throw new BadRequestException("missing fields");
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             const { rows } = await client.query(`insert into pricing_rules(scope, org_id, role, user_id, provider, model, metric, price_per_1k, currency, active) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *`, [scope, org_id || org, role || null, user_id || null, provider, model, metric, price_per_1k, currency, active]);
             await client.query(`insert into audit_log(org_id, user_id, action, entity, entity_id, after) values ($1,$2,'create','pricing_rule',$3,$4)`, [org, ctx.userId || null, String(rows[0].id), rows[0]]);
@@ -97,7 +97,7 @@ let PricingController = class PricingController {
             throw new BadRequestException("org required");
         if (!perms.includes('manage_pricing'))
             throw new ForbiddenException("manage_pricing required");
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             const before = await client.query("select * from pricing_rules where id=$1", [id]);
             await client.query("update pricing_rules set deleted_at=now(), active=false where id=$1", [id]);

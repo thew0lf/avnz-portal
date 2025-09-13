@@ -6,6 +6,11 @@ export async function POST(req: NextRequest) {
   const token = String(form.get('token') || '')
   const password = String(form.get('password') || '')
   const username = String(form.get('username') || '')
+  const csrf = String(form.get('csrf')||'')
+  const csrfCookie = req.cookies.get('csrf')?.value || ''
+  if (!csrf || !csrfCookie || csrf !== csrfCookie) {
+    return NextResponse.json({ ok:false, error:'invalid csrf' }, { status: 403 })
+  }
   const api = serverApiBase()
   const r = await fetch(`${api}/auth/accept-invite`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
@@ -18,4 +23,3 @@ export async function POST(req: NextRequest) {
   if (client_code) url.searchParams.set('client_code', client_code)
   return NextResponse.redirect(url)
 }
-

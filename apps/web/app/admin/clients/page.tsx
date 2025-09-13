@@ -4,34 +4,31 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ClientCreateForm from '@/components/admin/forms/ClientCreateForm'
 import { revalidatePath } from 'next/cache'
 
-async function createClient(formData: FormData) {
-  'use server'
-  const name = String(formData.get('name') || '')
-  await apiFetch('/clients/register', { method: 'POST', body: JSON.stringify({ name }) })
-  revalidatePath('/admin/clients')
-}
-
-export default async function ClientsPage() {
+export default async function ClientsPage({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }) {
   const cookie = cookies().get(getCookieName())
   const token = cookie?.value || ''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/clients')
   if (!session.roles.includes('org') && !session.roles.includes('admin')) redirect('/unauthorized')
 
-  const res = await apiFetch('/clients')
+  const q = searchParams?.q || ''
+  const limit = Number(searchParams?.limit || '20')
+  const offset = Number(searchParams?.offset || '0')
+  const res = await apiFetch(`/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
+  const nextOffset = offset + limit
+  const prevOffset = Math.max(0, offset - limit)
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-xl font-semibold">Clients</h1>
-      <form action={createClient} className="flex gap-2 items-end">
-        <div>
-          <label className="block text-sm text-muted-foreground">Name</label>
-          <Input name="name" placeholder="New client name" required />
-        </div>
-        <Button type="submit">Create</Button>
+      <ClientCreateForm />
+      <form action="/admin/clients" className="flex gap-2 items-end">
+        <Input name="q" placeholder="Search clients" defaultValue={q} className="w-64" />
+        <Button type="submit">Search</Button>
       </form>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -50,6 +47,11 @@ export default async function ClientsPage() {
             ))}
           </tbody>
         </table>
+        <div className="flex justify-between items-center mt-3">
+          <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
+          <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
+          <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
+        </div>
       </div>
     </main>
   )

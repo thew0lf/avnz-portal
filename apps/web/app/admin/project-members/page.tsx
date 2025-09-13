@@ -5,17 +5,8 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import ProjectMemberAddForm from '@/components/admin/forms/ProjectMemberAddForm'
 import { revalidatePath } from 'next/cache'
-
-async function addProjectMember(formData: FormData) {
-  'use server'
-  const project_code = String(formData.get('project_code') || '')
-  const identifier = String(formData.get('identifier') || '')
-  const role_id = String(formData.get('role_id') || '')
-  const role = String(formData.get('role') || 'contributor')
-  await apiFetch('/project-members', { method: 'POST', body: JSON.stringify({ projectCode: project_code, identifier, role, role_id: role_id || undefined }) })
-  revalidatePath('/admin/project-members')
-}
 
 export default async function ProjectMembersPage({ searchParams }: { searchParams?: { project?: string } }) {
   const cookie = cookies().get(getCookieName())
@@ -46,27 +37,7 @@ export default async function ProjectMembersPage({ searchParams }: { searchParam
         <Button type="submit">Load</Button>
       </form>
 
-      <form action={addProjectMember} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-        <input type="hidden" name="project_code" value={projectCode} />
-        <div>
-          <label className="block text-sm text-muted-foreground">Email or Username</label>
-          <Input name="identifier" placeholder="user@example.com or username" required />
-        </div>
-        <div>
-          <label className="block text-sm text-muted-foreground">Role</label>
-          <Input name="role" placeholder="contributor|viewer|admin" defaultValue="contributor" />
-        </div>
-        <div>
-          <label className="block text-sm text-muted-foreground">Role (select)</label>
-          <Select name="role_id">
-            <option value="">-- optional --</option>
-            {roles.map((r:any)=>(<option key={r.id} value={r.id}>{r.name}</option>))}
-          </Select>
-        </div>
-        <div>
-          <Button type="submit">Add / Update</Button>
-        </div>
-      </form>
+      <ProjectMemberAddForm projectCode={projectCode} roles={roles} />
 
       {projectCode && (
         <div className="overflow-x-auto">

@@ -1,5 +1,50 @@
 {
-  "node": {},
+  "node": {
+    "66467a59c4e159c28503f1129f0411f55fbe9ed1": {
+      "workers": {
+        "app/admin/documents/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!",
+        "app/admin/clients/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!",
+        "app/admin/roles/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Fadmin%2Froles%2Fpage.tsx%22%2C%5B%22%24%24ACTION_1%22%2C%22%24%24ACTION_2%22%2C%22%24%24ACTION_0%22%5D%5D%2C%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!",
+        "app/admin/projects/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!",
+        "app/admin/invites/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!",
+        "app/admin/pricing/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!",
+        "app/admin/project-members/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/admin/documents/page": "rsc",
+        "app/admin/clients/page": "rsc",
+        "app/admin/roles/page": "rsc",
+        "app/admin/projects/page": "rsc",
+        "app/admin/invites/page": "rsc",
+        "app/admin/pricing/page": "rsc",
+        "app/admin/project-members/page": "rsc"
+      }
+    },
+    "11ba68768746775d50f6777bc9bc2185dfca77dc": {
+      "workers": {
+        "app/admin/roles/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Fadmin%2Froles%2Fpage.tsx%22%2C%5B%22%24%24ACTION_1%22%2C%22%24%24ACTION_2%22%2C%22%24%24ACTION_0%22%5D%5D%2C%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/admin/roles/page": "rsc"
+      }
+    },
+    "74e0e4d1785bdc36301451c7e5afbfb580975bdb": {
+      "workers": {
+        "app/admin/roles/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Fadmin%2Froles%2Fpage.tsx%22%2C%5B%22%24%24ACTION_1%22%2C%22%24%24ACTION_2%22%2C%22%24%24ACTION_0%22%5D%5D%2C%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/admin/roles/page": "rsc"
+      }
+    },
+    "f10c410b397b3a4bc3da2bbd75caf7c0e26a32b8": {
+      "workers": {
+        "app/admin/roles/page": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fapp%2Fapp%2Fadmin%2Froles%2Fpage.tsx%22%2C%5B%22%24%24ACTION_1%22%2C%22%24%24ACTION_2%22%2C%22%24%24ACTION_0%22%5D%5D%2C%5B%22%2Fapp%2Fapp%2Flayout.tsx%22%2C%5B%22%24%24ACTION_0%22%5D%5D%5D&__client_imported__=!"
+      },
+      "layer": {
+        "app/admin/roles/page": "rsc"
+      }
+    }
+  },
   "edge": {},
-  "encryptionKey": "TVDg0eLEbgEfRT1A3iqgqUk/sA1UsZvBxaVPVNQRFNQ="
+  "encryptionKey": "greUbCPtTclZ2u7/VrWZ5nFFHudwJ0Vi+vVE/tWn7Eo="
 }

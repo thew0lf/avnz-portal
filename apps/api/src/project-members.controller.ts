@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Query, BadRequestException, ForbiddenException, Req } from '@nestjs/common'
 import type { Request } from 'express'
-import { pool } from './db.js'
+import { pool, getClientForReq } from './db.js'
+import { audit } from './audit.js'
 
 @Controller('project-members')
 export class ProjectMembersController {
@@ -10,7 +11,7 @@ export class ProjectMembersController {
     if (!org) throw new BadRequestException('org required')
     const perms: string[] = req.auth?.perms || []
     if (!perms.includes('manage_members') && !perms.includes('admin')) throw new ForbiddenException('manage_members required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       let pid = projectId || null
       if (!pid && projectCode) {
@@ -35,7 +36,7 @@ export class ProjectMembersController {
     const perms: string[] = req.auth?.perms || []
     if (!perms.includes('manage_members') && !perms.includes('admin')) throw new ForbiddenException('manage_members required')
     const { projectId, projectCode, identifier, role='contributor', role_id } = body || {}
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       let pid = projectId || null
       if (!pid && projectCode) {
@@ -69,6 +70,7 @@ export class ProjectMembersController {
         }
       }
       await client.query('insert into project_members(user_id, project_id, role, role_id) values ($1,$2,$3,$4) on conflict (user_id, project_id) do update set role=excluded.role, role_id=excluded.role_id', [user.id, pid, role, rid])
+      await audit(req as any, 'upsert', 'project_member', String(user.id), null, { project_id: pid, role, role_id: rid })
       return { ok: true }
     } finally { client.release() }
   }

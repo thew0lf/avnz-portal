@@ -4,6 +4,11 @@ import { serverApiBase } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
   const form = await req.formData()
+  const csrf = String(form.get('csrf')||'')
+  const csrfCookie = req.cookies.get('csrf')?.value || ''
+  if (!csrf || !csrfCookie || csrf !== csrfCookie) {
+    return NextResponse.json({ ok:false, error:'invalid csrf' }, { status: 403 })
+  }
   const org_code = String(form.get('org_code') || '')
   const org_name = String(form.get('org_name') || '')
   const email = String(form.get('email') || '')

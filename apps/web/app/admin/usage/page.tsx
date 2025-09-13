@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocalStorage } from '../useLocalStorage';
 export default function Usage(){
   const [apiBase] = useLocalStorage<string>('apiBase', process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001');
-  const [orgId] = useLocalStorage<string>('orgId','demo');
+  const [orgId] = useLocalStorage<string>('orgId','');
   const [roles] = useLocalStorage<string>('roles','org');
   const [rows,setRows] = useState<any[]>([]);
   useEffect(()=>{ (async()=>{ const res=await fetch(`${apiBase}/usage/summary`,{headers:{'x-org-id':orgId,'x-roles':roles}}); const data=await res.json(); setRows(data.rows||[]); })(); },[apiBase,orgId,roles]);

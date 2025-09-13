@@ -2,7 +2,7 @@
 import { useState } from 'react'; import { useLocalStorage } from '../useLocalStorage'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input';
 export default function Compliance(){
   const [apiBase] = useLocalStorage<string>('apiBase', process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001');
-  const [orgId] = useLocalStorage<string>('orgId','demo');
+  const [orgId] = useLocalStorage<string>('orgId','');
   const [roles] = useLocalStorage<string>('roles','org');
   const [nodeType,setNodeType] = useState('document'); const [nodeId,setNodeId] = useState('');
   const [series,setSeries] = useState<any[]>([]);

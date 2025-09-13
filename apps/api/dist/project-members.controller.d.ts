@@ -3,7 +3,7 @@ export declare class ProjectMembersController {
     list(req: Request & {
         auth?: any;
     }, projectId?: string, projectCode?: string): Promise<{
-        rows: any[];
+        rows: any;
     }>;
     add(req: Request & {
         auth?: any;

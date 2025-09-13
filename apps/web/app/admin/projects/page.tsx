@@ -4,46 +4,30 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { revalidatePath } from 'next/cache'
+import ProjectCreateForm from '@/components/admin/forms/ProjectCreateForm'
 
-async function createProject(formData: FormData) {
-  'use server'
-  const code = String(formData.get('code') || '')
-  const name = String(formData.get('name') || '')
-  const client_code = String(formData.get('client_code') || '')
-  await apiFetch('/projects', { method: 'POST', body: JSON.stringify({ code: code || undefined, name, client_code: client_code || undefined }) })
-  revalidatePath('/admin/projects')
-}
-
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }) {
   const cookie = cookies().get(getCookieName())
   const token = cookie?.value || ''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/projects')
   if (!session.roles.includes('org') && !session.roles.includes('admin')) redirect('/unauthorized')
 
-  const res = await apiFetch('/projects')
+  const q = searchParams?.q || ''
+  const limit = Number(searchParams?.limit || '20')
+  const offset = Number(searchParams?.offset || '0')
+  const res = await apiFetch(`/projects?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
+  const nextOffset = offset + limit
+  const prevOffset = Math.max(0, offset - limit)
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-xl font-semibold">Projects</h1>
-      <form action={createProject} className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
-        <div>
-          <label className="block text-sm text-muted-foreground">Name</label>
-          <Input name="name" placeholder="New project" required />
-        </div>
-        <div>
-          <label className="block text-sm text-muted-foreground">Code (optional)</label>
-          <Input name="code" placeholder="short-code" />
-        </div>
-        <div>
-          <label className="block text-sm text-muted-foreground">Client Code (optional)</label>
-          <Input name="client_code" placeholder="client short code" />
-        </div>
-        <div>
-          <Button type="submit">Create</Button>
-        </div>
+      <ProjectCreateForm />
+      <form action="/admin/projects" className="flex gap-2 items-end">
+        <Input name="q" placeholder="Search projects" defaultValue={q} className="w-64" />
+        <Button type="submit">Search</Button>
       </form>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -62,7 +46,11 @@ export default async function ProjectsPage() {
           </tbody>
         </table>
       </div>
+      <div className="flex justify-between items-center mt-3">
+        <a className="underline" href={`/admin/projects?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
+        <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
+        <a className="underline" href={`/admin/projects?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
+      </div>
     </main>
   )
 }
-

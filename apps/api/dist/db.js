@@ -12,3 +12,22 @@ export async function withRls(userId, orgId, fn) {
         client.release();
     }
 }
+export async function getClientForReq(req) {
+    const client = await pool.connect();
+    const orgUUID = req?.auth?.orgUUID || null;
+    try {
+        if (orgUUID) {
+            await client.query("select set_config('app.org_uuid', $1, true)", [String(orgUUID)]);
+        }
+    }
+    catch { }
+    const orig = client.release.bind(client);
+    client.release = async () => {
+        try {
+            await client.query("select set_config('app.org_uuid', '', false)");
+        }
+        catch { }
+        return orig();
+    };
+    return client;
+}

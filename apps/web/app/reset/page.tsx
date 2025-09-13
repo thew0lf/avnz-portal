@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast-provider'
 
 export default function Reset() {
   const sp = useSearchParams()
@@ -11,12 +12,14 @@ export default function Reset() {
   const [password, setPassword] = useState('new-password')
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const { success, error: toastError } = useToast()
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     const r = await fetch('/api/auth/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password }) })
-    const data = await r.json()
+    const data = await r.json().catch(()=>({ ok:false }))
     setResult(data)
+    if (!r.ok || !data?.ok) { toastError(String(data?.error || 'Password reset failed')) } else { success('Password reset') }
     setLoading(false)
   }
   return (
@@ -24,7 +27,7 @@ export default function Reset() {
       <Card className="w-full max-w-md">
         <CardHeader><CardTitle>Reset password</CardTitle></CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-3">
+          <form method="post" onSubmit={onSubmit} className="space-y-3">
             <Input type="password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="new password" />
             <Button disabled={loading} type="submit">{loading ? 'Resetting...' : 'Reset'}</Button>
             {result && <div className="text-sm text-muted-foreground">{result.ok ? 'Password reset' : String(result.error || 'Failed')}</div>}
@@ -34,4 +37,3 @@ export default function Reset() {
     </main>
   )
 }
-

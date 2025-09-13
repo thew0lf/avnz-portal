@@ -11,6 +11,11 @@
   },
   "dependencies": {
     "next": "14.2.5",
+    "nextjs-toploader": "^2.5.3",
+    "react-hook-form": "^7.53.0",
+    "zod": "^3.23.8",
+    "@hookform/resolvers": "^3.9.0",
+    "@radix-ui/react-slot": "^1.0.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "clsx": "^2.1.1",

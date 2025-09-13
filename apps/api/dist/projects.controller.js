@@ -11,7 +11,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Controller, Get, Post, Body, BadRequestException, Req, ForbiddenException } from '@nestjs/common';
-import { pool } from './db.js';
+import { getClientForReq } from './db.js';
+import { audit } from './audit.js';
 let ProjectsController = class ProjectsController {
     async mine(req) {
         const org = req.auth?.orgUUID;
@@ -20,7 +21,7 @@ let ProjectsController = class ProjectsController {
         const userId = req.auth?.userId;
         const perms = req.auth?.perms || [];
         const clientId = req.auth?.clientId;
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             if (perms.includes('manage_projects') || perms.includes('admin')) {
                 const { rows } = await client.query('select id, code, name from projects where org_id=$1 order by name asc', [org]);
@@ -55,10 +56,22 @@ let ProjectsController = class ProjectsController {
         const perms = req.auth?.perms || [];
         if (!perms.includes('manage_projects') && !perms.includes('admin'))
             throw new ForbiddenException('manage_projects required');
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
-            const { rows } = await client.query('select p.id, p.code, p.name, p.created_at, p.client_id, c.code as client_code from projects p left join clients c on c.id=p.client_id where p.org_id=$1 order by p.created_at desc', [org]);
-            return { rows };
+            const url = new URL(req.url, 'http://local');
+            const q = url.searchParams.get('q') || '';
+            const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit') || '20')));
+            const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
+            let sql = 'select p.id, p.code, p.name, p.created_at, p.client_id, c.code as client_code from projects p left join clients c on c.id=p.client_id where p.org_id=$1';
+            const args = [org];
+            if (q) {
+                args.push(`%${q.toLowerCase()}%`);
+                sql += ` and (lower(p.code) like $${args.length} or lower(p.name) like $${args.length})`;
+            }
+            sql += ' order by p.created_at desc';
+            sql += ` limit ${limit} offset ${offset}`;
+            const { rows } = await client.query(sql, args);
+            return { rows, limit, offset, q };
         }
         finally {
             client.release();
@@ -74,7 +87,7 @@ let ProjectsController = class ProjectsController {
         const { code, name, client_code } = body || {};
         if (!name)
             throw new BadRequestException('name required');
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             let clientId = null;
             if (client_code) {
@@ -84,7 +97,9 @@ let ProjectsController = class ProjectsController {
                     throw new BadRequestException('invalid client_code');
             }
             const { rows } = await client.query('insert into projects(org_id, client_id, code, name) values ($1,$2,$3,$4) returning id, code, name, created_at, client_id', [org, clientId, code || null, name]);
-            return rows[0];
+            const proj = rows[0];
+            await audit(req, 'create', 'project', proj.id, null, proj);
+            return proj;
         }
         finally {
             client.release();

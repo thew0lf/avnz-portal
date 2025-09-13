@@ -12,7 +12,7 @@ export declare class UsageController {
         from: string;
         to: string;
         groupBy: string[];
-        rows: any[];
+        rows: any;
     }>;
     addEvent(req: ReqX, body: any): Promise<{
         ok: boolean;

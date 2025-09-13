@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, BadRequestException, Req, ForbiddenException } from '@nestjs/common'
 import type { Request } from 'express'
-import { pool } from './db.js'
+import { pool, getClientForReq } from './db.js'
+import { audit } from './audit.js'
 
 @Controller('projects')
 export class ProjectsController {
@@ -11,7 +12,7 @@ export class ProjectsController {
     const userId = req.auth?.userId
     const perms: string[] = req.auth?.perms || []
     const clientId: string | undefined = (req.auth as any)?.clientId
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       if (perms.includes('manage_projects') || perms.includes('admin')) {
         const { rows } = await client.query('select id, code, name from projects where org_id=$1 order by name asc', [org])
@@ -48,13 +49,19 @@ export class ProjectsController {
     if (!org) throw new BadRequestException('org required')
     const perms: string[] = req.auth?.perms || []
     if (!perms.includes('manage_projects') && !perms.includes('admin')) throw new ForbiddenException('manage_projects required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
-      const { rows } = await client.query(
-        'select p.id, p.code, p.name, p.created_at, p.client_id, c.code as client_code from projects p left join clients c on c.id=p.client_id where p.org_id=$1 order by p.created_at desc',
-        [org]
-      )
-      return { rows }
+      const url = new URL(req.url, 'http://local')
+      const q = url.searchParams.get('q') || ''
+      const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit')||'20')))
+      const offset = Math.max(0, Number(url.searchParams.get('offset')||'0'))
+      let sql = 'select p.id, p.code, p.name, p.created_at, p.client_id, c.code as client_code from projects p left join clients c on c.id=p.client_id where p.org_id=$1'
+      const args: any[] = [org]
+      if (q) { args.push(`%${q.toLowerCase()}%`); sql += ` and (lower(p.code) like $${args.length} or lower(p.name) like $${args.length})` }
+      sql += ' order by p.created_at desc'
+      sql += ` limit ${limit} offset ${offset}`
+      const { rows } = await client.query(sql, args)
+      return { rows, limit, offset, q }
     } finally { client.release() }
   }
 
@@ -66,7 +73,7 @@ export class ProjectsController {
     if (!perms.includes('manage_projects') && !perms.includes('admin')) throw new ForbiddenException('manage_projects required')
     const { code, name, client_code } = body || {}
     if (!name) throw new BadRequestException('name required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       let clientId: string | null = null
       if (client_code) {
@@ -78,7 +85,9 @@ export class ProjectsController {
         'insert into projects(org_id, client_id, code, name) values ($1,$2,$3,$4) returning id, code, name, created_at, client_id',
         [org, clientId, code || null, name]
       )
-      return rows[0]
+      const proj = rows[0]
+      await audit(req as any, 'create', 'project', proj.id, null, proj)
+      return proj
     } finally { client.release() }
   }
 }

@@ -1,8 +1,9 @@
 import { Controller, Post, Body, BadRequestException, Get, Req, ForbiddenException } from '@nestjs/common'
-import { pool } from './db.js'
+import { pool, getClientForReq } from './db.js'
 import type { Request } from 'express'
 import { scryptHash, randomToken, sha256hex } from './auth.util.js'
 import { sendInviteEmail } from './mailer.js'
+import { audit } from './audit.js'
 
 function genCode(length = 6) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -19,10 +20,19 @@ export class ClientsController {
     if (!org) throw new BadRequestException('org required')
     const perms: string[] = req.auth?.perms || []
     if (!perms.includes('manage_clients') && !perms.includes('admin')) throw new ForbiddenException('manage_clients required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
-      const { rows } = await client.query('select c.id, c.code, c.name, c.created_at, u.email as manager_email from clients c left join users u on u.id=c.manager_user_id where c.org_id=$1 order by c.created_at desc', [org])
-      return { rows }
+      const url = new URL(req.url, 'http://local')
+      const q = url.searchParams.get('q') || ''
+      const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit')||'20')))
+      const offset = Math.max(0, Number(url.searchParams.get('offset')||'0'))
+      let sql = 'select c.id, c.code, c.name, c.created_at, u.email as manager_email from clients c left join users u on u.id=c.manager_user_id where c.org_id=$1'
+      const args: any[] = [org]
+      if (q) { args.push(`%${q.toLowerCase()}%`); sql += ` and (lower(c.code) like $${args.length} or lower(c.name) like $${args.length})` }
+      sql += ' order by c.created_at desc'
+      sql += ` limit ${limit} offset ${offset}`
+      const { rows } = await client.query(sql, args)
+      return { rows, limit, offset, q }
     } finally {
       client.release()
     }
@@ -36,7 +46,7 @@ export class ClientsController {
     if (!perms.includes('manage_clients') && !perms.includes('admin')) throw new ForbiddenException('manage_clients required')
     const { name } = body || {}
     if (!name) throw new BadRequestException('name required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       // Try to insert with an auto-generated unique code, retry on collision
       let created: any = null
@@ -74,6 +84,7 @@ export class ClientsController {
         if (adminRoleId) for (const r of pAdmin.rows) await client.query('insert into role_permissions(role_id, permission_id) values ($1,$2) on conflict do nothing', [adminRoleId, r.id])
         if (userRoleId) for (const r of pUser.rows) await client.query('insert into role_permissions(role_id, permission_id) values ($1,$2) on conflict do nothing', [userRoleId, r.id])
       } catch {}
+      await audit(req as any, 'create', 'client', created.id, null, created)
       return created
     } catch (e: any) {
       if (String(e?.message || '').includes('duplicate')) throw new BadRequestException('code already exists')
@@ -283,6 +294,7 @@ export class ClientsController {
       const user = u.rows[0]
       if (!user) throw new BadRequestException('user not found')
       await client.query('update clients set manager_user_id=$1 where id=$2', [user.id, id])
+      await audit(req as any, 'update', 'client.manager', id, null, { manager_user_id: user.id })
       return { ok: true }
     } finally { client.release() }
   }

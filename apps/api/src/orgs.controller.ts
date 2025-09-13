@@ -1,6 +1,7 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common'
 import { pool } from './db.js'
-import { scryptHash, signToken, randomToken, sha256hex } from './auth.util.js'
+import { hashPassword, scryptHash, signToken, randomToken, sha256hex } from './auth.util.js'
+import { validatePassword } from './security.js'
 
 @Controller('orgs')
 export class OrgsController {
@@ -15,7 +16,8 @@ export class OrgsController {
       const orgIns = await client.query('insert into organizations(code, name) values ($1,$2) returning id, code, name', [String(org_code).toLowerCase(), org_name])
       const org = orgIns.rows[0]
       // Create user
-      const pw = scryptHash(password)
+      await validatePassword(client, String(password))
+      const pw = await hashPassword(String(password))
       // Note: users.org_id is a legacy TEXT column; set to org.code for compatibility
       const u = await client.query('insert into users(org_id,email,username,password_hash) values ($1,$2,$3,$4) returning id, email, username', [String(org.code), String(email).toLowerCase(), username || null, pw])
       const user = u.rows[0]

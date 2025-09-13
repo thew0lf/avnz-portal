@@ -7,24 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import InviteCreateForm from '@/components/admin/forms/InviteCreateForm'
+import { ActionButton } from '@/components/admin/ActionButton'
 
-async function createInvite(formData: FormData) {
-  'use server'
-  const email = String(formData.get('email') || '')
-  const client_id = String(formData.get('client_id') || '')
-  const role = String(formData.get('role') || '') || 'user'
-  const body: any = { email, role }
-  if (client_id) body.client_id = client_id
-  await apiFetch('/clients/invite', { method: 'POST', body: JSON.stringify(body) })
-  revalidatePath('/admin/invites')
-}
-
-async function revokeInvite(formData: FormData) {
-  'use server'
-  const id = String(formData.get('id') || '')
-  await apiFetch(`/clients/invites/${id}/revoke`, { method: 'POST' })
-  revalidatePath('/admin/invites')
-}
+// SPA handled via InviteCreateForm and ActionButton
 
 export default async function InvitesPage() {
   const cookie = cookies().get(getCookieName())
@@ -49,32 +35,7 @@ export default async function InvitesPage() {
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-xl font-semibold">Invites</h1>
-      <form action={createInvite} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-        <div>
-          <Label className="block text-sm text-muted-foreground">Email</Label>
-          <Input name="email" type="email" placeholder="user@example.com" required />
-        </div>
-        {canSelectClient && (
-          <div>
-            <Label className="block text-sm text-muted-foreground">Client</Label>
-            <Select name="client_id" required>
-              <option value="">Select client</option>
-              {clients.map((c:any)=>(<option key={c.id} value={c.id}>{c.name} ({c.code})</option>))}
-            </Select>
-          </div>
-        )}
-        <div>
-          <Label className="block text-sm text-muted-foreground">Role</Label>
-          <Select name="role" defaultValue="user">
-            <option value="user">user</option>
-            <option value="client-admin">client-admin</option>
-            <option value="client-user">client-user</option>
-          </Select>
-        </div>
-        <div>
-          <Button type="submit">Send Invite</Button>
-        </div>
-      </form>
+      <InviteCreateForm clients={clients} canSelectClient={canSelectClient} />
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -96,10 +57,7 @@ export default async function InvitesPage() {
                 <td className="py-2 pr-4">{iv.expires_at ? new Date(iv.expires_at).toLocaleString() : '-'}</td>
                 <td className="py-2 pr-4">
                   {!iv.revoked && !iv.used_at && (
-                    <form action={revokeInvite}>
-                      <input type="hidden" name="id" value={iv.id} />
-                      <Button type="submit" variant="secondary">Revoke</Button>
-                    </form>
+                    <ActionButton label="Revoke" variant="secondary" method="POST" path={`/clients/invites/${iv.id}/revoke`} onDone={()=>{ /* SSR list */ }} />
                   )}
                 </td>
               </tr>
@@ -110,4 +68,3 @@ export default async function InvitesPage() {
     </main>
   )
 }
-

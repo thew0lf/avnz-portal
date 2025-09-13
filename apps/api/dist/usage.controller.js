@@ -11,7 +11,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Controller, Get, Post, Body, Query, Req, BadRequestException, ForbiddenException } from "@nestjs/common";
-import { pool } from "./db.js";
+import { getClientForReq } from "./db.js";
 function parseDate(s, def) { if (!s)
     return def || new Date(Date.now() - 7 * 24 * 3600 * 1000); const d = new Date(s); if (isNaN(d.getTime()))
     throw new BadRequestException("invalid date"); return d; }
@@ -40,7 +40,7 @@ let UsageController = class UsageController {
         }
         if (!pid && projectCode) {
             const org = ctx.orgUUID || ctx.orgId;
-            const client0 = await pool.connect();
+            const client0 = await getClientForReq(req);
             try {
                 const r = await client0.query('select p.id from projects p where p.org_id=$1 and p.code=$2', [org, projectCode]);
                 if (r.rows[0]) {
@@ -56,7 +56,7 @@ let UsageController = class UsageController {
         // if filtering by project, enforce membership or manage_projects/admin permission
         const perms = ctx.perms || [];
         if (pid && !perms.includes('admin') && !perms.includes('manage_projects')) {
-            const client1 = await pool.connect();
+            const client1 = await getClientForReq(req);
             try {
                 const m = await client1.query('select 1 from project_members where project_id=$1 and user_id=$2', [pid, ctx.userId]);
                 if (!m.rows[0])
@@ -76,7 +76,7 @@ let UsageController = class UsageController {
             where += ` and p.client_id = $${args.length}`;
         }
         const sql = `select ${groupSql}, sum(input_tokens) as in_tokens, sum(output_tokens) as out_tokens, sum(embed_tokens) as embed_tokens, round(sum(cost_usd)::numeric, 6) as cost_usd from usage_events${join} ${where} group by ${groupSql} order by sum(cost_usd) desc nulls last, ${groupSql} asc limit 1000`;
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             const { rows } = await client.query(sql, args);
             return { from: fromD.toISOString(), to: toD.toISOString(), groupBy: cols, rows };
@@ -92,7 +92,7 @@ let UsageController = class UsageController {
         const { provider, model, operation, input_tokens = 0, output_tokens = 0, embed_tokens = 0, cost_usd = 0, user_id = null, project_id = null, project_code = null } = body || {};
         if (!provider || !model || !operation)
             throw new BadRequestException("missing fields");
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             let pid = null;
             if (project_id) {

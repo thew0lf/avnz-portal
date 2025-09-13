@@ -12,8 +12,62 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { pool } from './db.js';
-import { signToken, scryptHash, verifyPassword, randomToken, sha256hex } from './auth.util.js';
+import { signToken, verifyPassword, randomToken, sha256hex, hashPassword } from './auth.util.js';
+import { validatePassword } from './security.js';
 let AuthController = class AuthController {
+    async mfaSetup(body) {
+        const { user_id } = body || {};
+        if (!user_id)
+            throw new BadRequestException('user_id required');
+        const secret = cryptoRandom(20);
+        const c = await pool.connect();
+        try {
+            await c.query('insert into mfa_secrets(user_id,secret,enabled) values ($1,$2,false) on conflict (user_id) do update set secret=$2, enabled=false, updated_at=now()', [user_id, secret]);
+            const otpauth = `otpauth://totp/Avnz:${user_id}?secret=${base32(secret)}&issuer=Avnz`;
+            return { secret: base32(secret), otpauth };
+        }
+        finally {
+            c.release();
+        }
+    }
+    async mfaEnable(body) {
+        const { user_id, code } = body || {};
+        if (!user_id || !code)
+            throw new BadRequestException('user_id, code required');
+        const c = await pool.connect();
+        try {
+            const r = await c.query('select secret from mfa_secrets where user_id=$1', [user_id]);
+            const row = r.rows[0];
+            if (!row)
+                throw new BadRequestException('setup required');
+            if (!verifyTotp(row.secret, String(code)))
+                throw new BadRequestException('invalid code');
+            await c.query('update mfa_secrets set enabled=true, updated_at=now() where user_id=$1', [user_id]);
+            return { ok: true };
+        }
+        finally {
+            c.release();
+        }
+    }
+    async mfaVerify(body) {
+        const { user_id, code } = body || {};
+        if (!user_id || !code)
+            throw new BadRequestException('user_id, code required');
+        const c = await pool.connect();
+        try {
+            const r = await c.query('select secret, enabled from mfa_secrets where user_id=$1', [user_id]);
+            const row = r.rows[0];
+            if (!row || !row.enabled)
+                throw new BadRequestException('mfa not enabled');
+            const ok = verifyTotp(row.secret, String(code));
+            if (!ok)
+                throw new BadRequestException('invalid code');
+            return { ok: true };
+        }
+        finally {
+            c.release();
+        }
+    }
     // Deprecated: direct registration removed in favor of invite acceptance
     async register(body) {
         const { invite_token, username, password } = body || {};
@@ -22,7 +76,7 @@ let AuthController = class AuthController {
         return await this.acceptInvite({ token: invite_token, username, password });
     }
     async login(body) {
-        const { client_code, identifier, password } = body || {};
+        const { client_code, identifier, password, mfa_code } = body || {};
         if (!client_code || !identifier || !password)
             throw new BadRequestException('client_code, identifier, password required');
         const client = await pool.connect();
@@ -43,9 +97,21 @@ let AuthController = class AuthController {
             const membership = m.rows[0];
             if (!membership)
                 throw new BadRequestException('invalid credentials');
-            const ok = verifyPassword(password, user.password_hash);
+            const ok = await verifyPassword(String(password), user.password_hash);
             if (!ok)
                 throw new BadRequestException('invalid credentials');
+            // MFA enforcement
+            const mfa = await client.query('select enabled from mfa_secrets where user_id=$1', [user.id]);
+            const mfaEnabled = !!mfa.rows[0]?.enabled;
+            const settings = await client.query('select require_mfa from security_settings limit 1');
+            const requireMfa = !!settings.rows[0]?.require_mfa;
+            if (mfaEnabled && requireMfa) {
+                if (!mfa_code)
+                    return { requires_mfa: true, user_id: user.id };
+                const s = await client.query('select secret from mfa_secrets where user_id=$1', [user.id]);
+                if (!verifyTotp(s.rows[0].secret, String(mfa_code)))
+                    throw new BadRequestException('invalid mfa code');
+            }
             // permissions for membership role
             let perms = [];
             const rp = await client.query(`select p.key from memberships m
@@ -98,7 +164,8 @@ let AuthController = class AuthController {
             if (new Date(inv.expires_at).getTime() < Date.now())
                 throw new BadRequestException('invite expired');
             // create user
-            const pw = scryptHash(String(password));
+            await validatePassword(client, String(password));
+            const pw = await hashPassword(String(password));
             const uIns = await client.query('insert into users(org_id,email,username,password_hash) values ($1,$2,$3,$4) returning id, email, username, created_at', [
                 // users.org_id legacy stores client code (text). Lookup client code by id.
                 (await client.query('select code from clients where id=$1', [inv.client_id])).rows[0].code,
@@ -188,7 +255,8 @@ let AuthController = class AuthController {
                 throw new BadRequestException('token already used');
             if (new Date(row.expires_at).getTime() < Date.now())
                 throw new BadRequestException('token expired');
-            const pw = scryptHash(String(password));
+            await validatePassword(client, String(password));
+            const pw = await hashPassword(String(password));
             await client.query('update users set password_hash=$1 where id=$2', [pw, row.user_id]);
             await client.query('update password_resets set used_at=now() where token_hash=$1', [hash]);
             // revoke all refresh tokens for the user
@@ -200,6 +268,27 @@ let AuthController = class AuthController {
         }
     }
 };
+__decorate([
+    Post('mfa/setup'),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "mfaSetup", null);
+__decorate([
+    Post('mfa/enable'),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "mfaEnable", null);
+__decorate([
+    Post('mfa/verify'),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "mfaVerify", null);
 __decorate([
     Post('register'),
     __param(0, Body()),
@@ -246,3 +335,41 @@ AuthController = __decorate([
     Controller('auth')
 ], AuthController);
 export { AuthController };
+// Minimal TOTP (RFC 6238) helpers
+import cryptoLib from 'crypto';
+function cryptoRandom(len) { return cryptoLib.randomBytes(len).toString('hex'); }
+function base32(hex) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    const bytes = Buffer.from(hex, 'hex');
+    let bits = '';
+    for (const b of bytes) {
+        bits += b.toString(2).padStart(8, '0');
+    }
+    let out = '';
+    for (let i = 0; i < bits.length; i += 5) {
+        const chunk = bits.slice(i, i + 5);
+        if (chunk.length < 5)
+            out += alphabet[parseInt(chunk.padEnd(5, '0'), 2)];
+        else
+            out += alphabet[parseInt(chunk, 2)];
+    }
+    return out;
+}
+function verifyTotp(secretHex, code, window = 1) {
+    const timeStep = 30;
+    const key = Buffer.from(secretHex, 'hex');
+    const now = Math.floor(Date.now() / 1000);
+    for (let w = -window; w <= window; w++) {
+        const ctr = Math.floor(now / timeStep) + w;
+        const h = cryptoLib.createHmac('sha1', key).update(Buffer.alloc(8));
+        const buf = Buffer.alloc(8);
+        buf.writeBigUInt64BE(BigInt(ctr));
+        const mac = cryptoLib.createHmac('sha1', key).update(buf).digest();
+        const offset = mac[mac.length - 1] & 0xf;
+        const bin = ((mac[offset] & 0x7f) << 24) | ((mac[offset + 1] & 0xff) << 16) | ((mac[offset + 2] & 0xff) << 8) | (mac[offset + 3] & 0xff);
+        const otp = (bin % 1000000).toString().padStart(6, '0');
+        if (otp === code)
+            return true;
+    }
+    return false;
+}

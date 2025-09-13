@@ -111,7 +111,7 @@ const Icons = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [apiBase, setApiBase] = useLocalStorage<string>('apiBase', process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001')
-  const [orgId, setOrgId] = useLocalStorage<string>('orgId', 'demo')
+  const [orgId, setOrgId] = useLocalStorage<string>('orgId', '')
   const [roles, setRoles] = useLocalStorage<string>('roles', 'org')
   const canAdmin = roles.split(',').map((s) => s.trim()).includes('org')
   return (
@@ -139,6 +139,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <MenuLink href="/admin/members">Members</MenuLink>
             <MenuLink href="/admin/roles">Roles &amp; Permissions</MenuLink>
             <MenuLink href="/admin/invites">Invites</MenuLink>
+            <MenuLink href="/admin/authz/roles">AuthZ Roles</MenuLink>
+            <MenuLink href="/admin/authz/actions">AuthZ Actions</MenuLink>
+            <MenuLink href="/admin/authz/permissions">AuthZ Permissions</MenuLink>
+            <MenuLink href="/admin/authz/nodes">AuthZ Nodes</MenuLink>
+            <MenuLink href="/admin/authz/routes">AuthZ Routes</MenuLink>
+          </Section>
+          <Section title="Security" icon={Icons.shield}>
+            <MenuLink href="/admin/security">Security Settings</MenuLink>
           </Section>
           <Section title="Billing & Analytics" icon={Icons.billing}>
             <MenuLink href="/admin/pricing">Pricing Rules</MenuLink>

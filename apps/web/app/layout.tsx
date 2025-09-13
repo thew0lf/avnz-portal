@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getCookieName, verifyToken } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
+import NextTopLoader from 'nextjs-toploader'
+import AppProviders from '@/components/AppProviders'
 
 async function LogoutButton() {
   async function action() {
@@ -24,21 +26,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <NextTopLoader color="#0ea5e9" initialPosition={0.2} crawlSpeed={150} height={3} crawl={true} showSpinner={false} easing="ease" speed={200} shadow="0 0 10px #0ea5e9, 0 0 5px #0ea5e9" />
         <header className="border-b">
           <div className="container flex h-14 items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/" className="font-semibold">avnzr-portal</Link>
-              <nav className="text-sm text-muted-foreground flex gap-3">
-                <Link href="/admin">Admin</Link>
-                <Link href="/admin/pricing">Pricing</Link>
-                <Link href="/admin/documents">Documents</Link>
-                <Link href="/admin/search">Search</Link>
-                <Link href="/admin/clients">Clients</Link>
-                <Link href="/admin/projects">Projects</Link>
-                <Link href="/admin/members">Members</Link>
-                <Link href="/admin/project-members">Project Members</Link>
-                <Link href="/admin/roles">Roles</Link>
-              </nav>
             </div>
             <div className="flex items-center gap-3 text-sm">
               {session ? (
@@ -54,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </header>
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )
