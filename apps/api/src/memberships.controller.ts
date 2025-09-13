@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, BadRequestException, Req, ForbiddenException } from '@nestjs/common'
 import type { Request } from 'express'
-import { pool } from './db.js'
+import { pool, getClientForReq } from './db.js'
+import { audit } from './audit.js'
 
 @Controller('memberships')
 export class MembershipsController {
@@ -10,7 +11,7 @@ export class MembershipsController {
     if (!org) throw new BadRequestException('org required')
     const perms: string[] = req.auth?.perms || []
     if (!perms.includes('manage_members') && !perms.includes('admin')) throw new ForbiddenException('manage_members required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       const { rows } = await client.query(
         `select m.user_id, m.role, u.email, u.username, m.created_at
@@ -29,7 +30,7 @@ export class MembershipsController {
     if (!perms.includes('manage_members') && !perms.includes('admin')) throw new ForbiddenException('manage_members required')
     const { identifier, role='user', role_id } = body || {}
     if (!identifier) throw new BadRequestException('identifier required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       const ident = String(identifier).toLowerCase()
       const u = await client.query('select id from users where lower(email)=$1 or lower(username)=lower($2)', [ident, identifier])
@@ -51,6 +52,7 @@ export class MembershipsController {
         }
       }
       await client.query('insert into memberships(user_id, org_id, role, role_id) values ($1,$2,$3,$4) on conflict (user_id, org_id) do update set role=excluded.role, role_id=excluded.role_id', [user.id, org, role, rid])
+      await audit(req as any, 'upsert', 'membership', String(user.id), null, { org_id: org, role, role_id: rid })
       return { ok: true }
     } finally { client.release() }
   }

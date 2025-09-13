@@ -1,4 +1,14 @@
 export declare class AuthController {
+    mfaSetup(body: any): Promise<{
+        secret: string;
+        otpauth: string;
+    }>;
+    mfaEnable(body: any): Promise<{
+        ok: boolean;
+    }>;
+    mfaVerify(body: any): Promise<{
+        ok: boolean;
+    }>;
     register(body: any): Promise<{
         ok: boolean;
         user: {
@@ -9,6 +19,13 @@ export declare class AuthController {
         client_code: any;
     }>;
     login(body: any): Promise<{
+        requires_mfa: boolean;
+        user_id: any;
+        token?: undefined;
+        refresh_token?: undefined;
+        refresh_expires?: undefined;
+        user?: undefined;
+    } | {
         token: string;
         refresh_token: string;
         refresh_expires: string;
@@ -21,6 +38,8 @@ export declare class AuthController {
             username: any;
             roles: any[];
         };
+        requires_mfa?: undefined;
+        user_id?: undefined;
     }>;
     acceptInvite(body: any): Promise<{
         ok: boolean;

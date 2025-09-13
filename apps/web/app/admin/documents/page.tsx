@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import DocumentIngestForm from '@/components/admin/forms/DocumentIngestForm'
 
 export default async function DocumentsPage() {
   const cookie = cookies().get(getCookieName())
@@ -25,20 +26,7 @@ export default async function DocumentsPage() {
           <CardTitle>Ingest Document</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action="/api/ai/ingest" method="post" encType="multipart/form-data" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="file">File</Label>
-              <Input id="file" name="file" type="file" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="project_code">Project (optional)</Label>
-              <Select id="project_code" name="project_code">
-                <option value="">Select a project...</option>
-                {projects.map((p:any)=>(<option key={p.id} value={p.code||''}>{p.name}{p.code?` (${p.code})`:''}</option>))}
-              </Select>
-            </div>
-            <Button type="submit">Upload</Button>
-          </form>
+          <DocumentIngestForm projects={projects} />
         </CardContent>
       </Card>
     </main>

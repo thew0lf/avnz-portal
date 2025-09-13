@@ -9,6 +9,11 @@ export async function POST(req: NextRequest) {
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) return NextResponse.redirect(new URL('/register/org', req.url))
   const form = await req.formData()
+  const csrf = String(form.get('csrf')||'')
+  const csrfCookie = req.cookies.get('csrf')?.value || ''
+  if (!csrf || !csrfCookie || csrf !== csrfCookie) {
+    return NextResponse.json({ ok:false, error:'invalid csrf' }, { status: 403 })
+  }
   const name = String(form.get('name') || '')
   const api = serverApiBase()
   const r = await fetch(`${api}/clients/register`, {

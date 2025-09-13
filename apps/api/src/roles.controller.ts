@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, BadRequestException, Req } from '@nestjs/common'
 import type { Request } from 'express'
-import { pool } from './db.js'
+import { pool, getClientForReq } from './db.js'
+import { audit } from './audit.js'
 
 @Controller('roles')
 export class RolesController {
@@ -10,7 +11,7 @@ export class RolesController {
     if (!org) throw new BadRequestException('org required')
     const perms: string[] = req.auth?.perms || []
     const clientId = req.auth?.clientId || null
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       if (!perms.includes('admin') && !perms.includes('manage_members') && clientId) {
         // Client users: only see roles scoped to their client
@@ -51,7 +52,7 @@ export class RolesController {
     const requesterClientId: string | null = req.auth?.clientId || null
     const { name, description, client_id } = body || {}
     if (!name) throw new BadRequestException('name required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       // Decide scope: if requester is client-scoped without org-wide perms, force role under their client
       let scopeClientId: string | null = null
@@ -65,13 +66,14 @@ export class RolesController {
         'insert into roles(org_id, client_id, name, description) values ($1,$2,$3,$4) returning id, name, description',
         [org, scopeClientId, name, description || null]
       )
+      await audit(req as any, 'create', 'authz.role', rows[0]?.id, null, rows[0])
       return rows[0]
     } finally { client.release() }
   }
 
   @Get('permissions')
   async permissions() {
-    const client = await pool.connect()
+    const client = await getClientForReq({} as any)
     try {
       const { rows } = await client.query('select id, key, description from permissions order by key asc')
       return { rows }
@@ -84,7 +86,7 @@ export class RolesController {
     if (!org) throw new BadRequestException('org required')
     const { keys } = body || {}
     if (!Array.isArray(keys)) throw new BadRequestException('keys[] required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       // validate role belongs to org and requester can modify it
       const r = await client.query('select id, client_id from roles where id=$1 and org_id=$2', [id, org])
@@ -106,10 +108,12 @@ export class RolesController {
       // map keys to permission ids
       const p = await client.query('select id, key from permissions where key = any($1)', [keys])
       const ids = p.rows.map((x: any) => x.id)
+      const before = await client.query('select rp.permission_id from role_permissions rp where role_id=$1',[id])
       await client.query('delete from role_permissions where role_id=$1', [id])
       for (const pid of ids) {
         await client.query('insert into role_permissions(role_id, permission_id) values ($1,$2) on conflict do nothing', [id, pid])
       }
+      await audit(req as any, 'update', 'authz.role_permissions', id, { permissions: before.rows }, { permissions: ids })
       return { ok: true, count: ids.length }
     } finally { client.release() }
   }
@@ -118,7 +122,7 @@ export class RolesController {
   async members(@Req() req: Request & { auth?: any }, @Param('id') id: string) {
     const org = req.auth?.orgUUID
     if (!org) throw new BadRequestException('org required')
-    const client = await pool.connect()
+    const client = await getClientForReq(req as any)
     try {
       const r = await client.query('select id from roles where id=$1 and org_id=$2', [id, org])
       if (!r.rows[0]) throw new BadRequestException('role not found')
@@ -167,6 +171,7 @@ export class RolesController {
         if (!cm.rows[0]) throw new BadRequestException('user not in client')
       }
       await client.query('insert into memberships(user_id, org_id, role, role_id) values ($1,$2,$3,$4) on conflict (user_id,org_id) do update set role=$3, role_id=$4', [user.id, org, role.name, role.id])
+      await audit(req as any, 'upsert', 'membership', String(user.id), null, { org_id: org, role: role.name, role_id: role.id })
       return { ok: true }
     } finally { client.release() }
   }

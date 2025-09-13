@@ -18,6 +18,4 @@ DO $$ BEGIN
   EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS users_org_username_key ON users(org_id, username)';
 END $$;
 
--- Seed default demo organization to match sample data
-INSERT INTO organizations(code, name) VALUES ('demo','Demo Org') ON CONFLICT (code) DO NOTHING;
-
+-- No default organizations are seeded. Orgs are created via registration.

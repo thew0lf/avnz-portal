@@ -11,7 +11,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Controller, Get, Post, Body, Query, BadRequestException, ForbiddenException, Req } from '@nestjs/common';
-import { pool } from './db.js';
+import { getClientForReq } from './db.js';
+import { audit } from './audit.js';
 let ProjectMembersController = class ProjectMembersController {
     async list(req, projectId, projectCode) {
         const org = req.auth?.orgUUID;
@@ -20,7 +21,7 @@ let ProjectMembersController = class ProjectMembersController {
         const perms = req.auth?.perms || [];
         if (!perms.includes('manage_members') && !perms.includes('admin'))
             throw new ForbiddenException('manage_members required');
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             let pid = projectId || null;
             if (!pid && projectCode) {
@@ -46,7 +47,7 @@ let ProjectMembersController = class ProjectMembersController {
         if (!perms.includes('manage_members') && !perms.includes('admin'))
             throw new ForbiddenException('manage_members required');
         const { projectId, projectCode, identifier, role = 'contributor', role_id } = body || {};
-        const client = await pool.connect();
+        const client = await getClientForReq(req);
         try {
             let pid = projectId || null;
             if (!pid && projectCode) {
@@ -87,6 +88,7 @@ let ProjectMembersController = class ProjectMembersController {
                 }
             }
             await client.query('insert into project_members(user_id, project_id, role, role_id) values ($1,$2,$3,$4) on conflict (user_id, project_id) do update set role=excluded.role, role_id=excluded.role_id', [user.id, pid, role, rid]);
+            await audit(req, 'upsert', 'project_member', String(user.id), null, { project_id: pid, role, role_id: rid });
             return { ok: true };
         }
         finally {

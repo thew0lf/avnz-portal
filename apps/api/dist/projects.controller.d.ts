@@ -3,12 +3,15 @@ export declare class ProjectsController {
     mine(req: Request & {
         auth?: any;
     }): Promise<{
-        rows: any[];
+        rows: any;
     }>;
     list(req: Request & {
         auth?: any;
     }): Promise<{
-        rows: any[];
+        rows: any;
+        limit: number;
+        offset: number;
+        q: string;
     }>;
     create(req: Request & {
         auth?: any;

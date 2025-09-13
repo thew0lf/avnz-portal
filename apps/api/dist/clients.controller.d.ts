@@ -3,7 +3,10 @@ export declare class ClientsController {
     list(req: Request & {
         auth?: any;
     }): Promise<{
-        rows: any[];
+        rows: any;
+        limit: number;
+        offset: number;
+        q: string;
     }>;
     register(req: Request & {
         auth?: any;

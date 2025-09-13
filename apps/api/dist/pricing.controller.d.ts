@@ -42,7 +42,7 @@ export declare class PricingController {
     }>;
     private unitPrice;
     list(req: ReqX): Promise<{
-        rows: any[];
+        rows: any;
     }>;
     create(req: ReqX, body: Partial<PricingRule> & {
         price_per_1k?: number;

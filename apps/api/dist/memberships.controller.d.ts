@@ -3,7 +3,7 @@ export declare class MembershipsController {
     list(req: Request & {
         auth?: any;
     }): Promise<{
-        rows: any[];
+        rows: any;
     }>;
     add(req: Request & {
         auth?: any;

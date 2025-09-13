@@ -5,14 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { revalidatePath } from 'next/cache'
-
-async function updateManager(formData: FormData) {
-  'use server'
-  const id = String(formData.get('client_id') || '')
-  const identifier = String(formData.get('identifier') || '')
-  await apiFetch(`/clients/${id}/manager`, { method: 'POST', body: JSON.stringify({ identifier }) })
-  revalidatePath('/admin/clients/manage')
-}
+import UpdateManagerForm from '@/components/admin/forms/UpdateManagerForm'
 
 export default async function ManageClientsPage() {
   const cookie = cookies().get(getCookieName())
@@ -38,11 +31,7 @@ export default async function ManageClientsPage() {
                 <td className="py-2 pr-4">{r.code}</td>
                 <td className="py-2 pr-4">{r.name}</td>
                 <td className="py-2 pr-4">
-                  <form action={updateManager} className="flex gap-2">
-                    <input type="hidden" name="client_id" value={r.id} />
-                    <Input name="identifier" placeholder="user@example.com or username" required />
-                    <Button type="submit" variant="outline">Save</Button>
-                  </form>
+                  <UpdateManagerForm clientId={r.id} />
                 </td>
               </tr>
             ))}
@@ -52,4 +41,3 @@ export default async function ManageClientsPage() {
     </main>
   )
 }
-

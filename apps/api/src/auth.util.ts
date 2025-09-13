@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import argon2 from 'argon2'
 
 export type JwtLike = {
   userId: string
@@ -27,17 +28,26 @@ export function verifyToken(token: string, secret: string): JwtLike | null {
   try { return JSON.parse(Buffer.from(p, 'base64url').toString('utf8')) } catch { return null }
 }
 
-export function scryptHash(password: string, salt?: string) {
+export async function hashPassword(password: string) {
+  return await argon2.hash(password, { type: argon2.argon2id })
+}
+
+export function scryptHash(password: string, salt?: string) { // keep for backward-compat seeds
   const s = salt || crypto.randomBytes(16).toString('hex')
   const key = crypto.scryptSync(password, s, 32)
   return `scrypt:${s}:${key.toString('hex')}`
 }
 
-export function verifyPassword(password: string, hash: string) {
-  if (!hash.startsWith('scrypt:')) return false
-  const [, salt, hex] = hash.split(':')
-  const derived = crypto.scryptSync(password, salt, 32).toString('hex')
-  return crypto.timingSafeEqual(Buffer.from(derived), Buffer.from(hex))
+export async function verifyPassword(password: string, hash: string) {
+  if (hash.startsWith('$argon2')) {
+    try { return await argon2.verify(hash, password) } catch { return false }
+  }
+  if (hash.startsWith('scrypt:')) {
+    const [, salt, hex] = hash.split(':')
+    const derived = crypto.scryptSync(password, salt, 32).toString('hex')
+    return crypto.timingSafeEqual(Buffer.from(derived), Buffer.from(hex))
+  }
+  return false
 }
 
 export function randomToken(bytes = 32) {

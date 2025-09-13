@@ -11,7 +11,8 @@ export type JwtLike = {
 };
 export declare function signToken(payload: Omit<JwtLike, 'iat'>, secret: string): string;
 export declare function verifyToken(token: string, secret: string): JwtLike | null;
+export declare function hashPassword(password: string): Promise<string>;
 export declare function scryptHash(password: string, salt?: string): string;
-export declare function verifyPassword(password: string, hash: string): boolean;
+export declare function verifyPassword(password: string, hash: string): Promise<boolean>;
 export declare function randomToken(bytes?: number): string;
 export declare function sha256hex(s: string): string;
