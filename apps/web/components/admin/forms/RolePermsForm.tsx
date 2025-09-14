@@ -13,7 +13,7 @@ export default function RolePermsForm({ roleId, perms, assigned, onSaved }: { ro
     setErr(null); setLoading(true)
     const keys = Array.from(selected)
     const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: `/roles/${encodeURIComponent(roleId)}/permissions`, method: 'POST', body: { keys } }) })
-    if (!r.ok) { try { const d=await r.json(); setErr(d?.error||d?.message||'Save failed') } catch { setErr('Save failed') } setLoading(false); return }
+    if (!r.ok) { try { const d=await r.json(); setErr(d?.error||d?.message||'We couldn’t save your changes. Please try again.') } catch { setErr('We couldn’t save your changes. Please try again.') } setLoading(false); return }
     setLoading(false); onSaved?.()
   }
   return (
@@ -31,4 +31,3 @@ export default function RolePermsForm({ roleId, perms, assigned, onSaved }: { ro
     </div>
   )
 }
-

@@ -1,4 +1,7 @@
 export declare class OrgsController {
+    mine(req: any): Promise<{
+        rows: any[];
+    }>;
     register(body: any): Promise<{
         token: string;
         refresh_token: string;

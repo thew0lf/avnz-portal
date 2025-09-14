@@ -18,7 +18,7 @@ export default function ActionCreateForm({ onCreated }: { onCreated?: () => void
     <form method="post" className="flex gap-2 items-end" onSubmit={handleSubmit(async (v) => {
       setServerError(null)
       const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: '/admin/actions', method: 'POST', body: { name: v.name } }) })
-      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'Create failed'; setServerError(msg); toastError(msg) } catch { setServerError('Create failed'); toastError('Create failed') } return }
+      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'We couldn’t complete this action. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t complete this action. Please try again.'; setServerError(m); toastError(m) } return }
       reset({ name: '' })
       success('Action created')
       onCreated?.()

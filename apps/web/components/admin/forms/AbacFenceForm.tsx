@@ -20,7 +20,7 @@ export default function AbacFenceForm({ onCreated }: { onCreated?: () => void })
       let parsed: any
       try { parsed = JSON.parse(v.expr) } catch { setServerError('Expression must be valid JSON'); return }
       const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: '/admin/abac', method: 'POST', body: { action_name: v.action_name, expr: parsed } }) })
-      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'Create failed'; setServerError(msg); toastError(msg) } catch { setServerError('Create failed'); toastError('Create failed') } return }
+      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'We couldn’t complete this action. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t complete this action. Please try again.'; setServerError(m); toastError(m) } return }
       reset({ action_name: '', expr: '' })
       success('Fence created')
       onCreated?.()

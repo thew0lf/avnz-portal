@@ -23,7 +23,7 @@ export default function ClientCreateForm({ onCreated }: { onCreated?: () => void
         body: JSON.stringify({ path: '/clients/register', method: 'POST', body: { name: values.name } }),
       })
       if (!r.ok) {
-        try { const data = await r.json(); const msg = data?.error || data?.message || 'Create client failed'; setServerError(msg); toastError(msg) } catch { setServerError('Create client failed'); toastError('Create client failed') }
+        try { const data = await r.json(); const msg = data?.error || data?.message || 'We couldn’t create the client. Please try again or contact support.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t create the client. Please try again or contact support.'; setServerError(m); toastError(m) }
         return
       }
       reset({ name: '' })

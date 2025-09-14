@@ -30,7 +30,7 @@ export default function PermissionCreateForm({
         body: JSON.stringify({ path: '/admin/permissions', method: 'POST', body: values }),
       })
       if (!r.ok) {
-        try { const data = await r.json(); const msg = data?.error || data?.message || 'Upsert permission failed'; setServerError(msg); toastError(msg) } catch { setServerError('Upsert permission failed'); toastError('Upsert permission failed') }
+        try { const data = await r.json(); const msg = data?.error || data?.message || 'We couldn’t save the permission. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t save the permission. Please try again.'; setServerError(m); toastError(m) }
         return
       }
       reset({ domain: defaultDomain, resource_type: '', action_name: '', min_role_id: '' })

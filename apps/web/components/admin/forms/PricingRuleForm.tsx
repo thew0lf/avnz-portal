@@ -28,7 +28,7 @@ export default function PricingRuleForm({ onSaved }: { onSaved?: () => void }) {
       setServerError(null)
       const payload = { scope: v.scope, org_id: v.org_id || null, role: v.role || null, user_id: v.user_id || null, provider: v.provider, model: v.model, metric: v.metric, price_per_1k: v.price_per_1k, currency: 'USD', active: true }
       const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: '/pricing/rules', method: 'POST', body: payload }) })
-      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'Create failed'; setServerError(msg); toastError(msg) } catch { setServerError('Create failed'); toastError('Create failed') } return }
+      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'We couldn’t create the pricing rule. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t create the pricing rule. Please try again.'; setServerError(m); toastError(m) } return }
       reset({ scope: '', org_id: '', role: '', user_id: '', provider: '', model: '', metric: '', price_per_1k: 0 } as any)
       success('Pricing rule created')
       onSaved?.()

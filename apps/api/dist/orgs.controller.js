@@ -10,11 +10,24 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Get, Req } from '@nestjs/common';
 import { pool } from './db.js';
 import { hashPassword, signToken, randomToken, sha256hex } from './auth.util.js';
 import { validatePassword } from './security.js';
 let OrgsController = class OrgsController {
+    async mine(req) {
+        const userId = req?.auth?.userId;
+        if (!userId)
+            throw new BadRequestException('unauthorized');
+        const c = await pool.connect();
+        try {
+            const r = await c.query(`select o.id, o.code, o.name from organizations o join memberships m on m.org_id=o.id where m.user_id=$1 group by o.id, o.code, o.name order by o.name`, [userId]);
+            return { rows: r.rows };
+        }
+        finally {
+            c.release();
+        }
+    }
     async register(body) {
         const { org_code, org_name, email, username, password } = body || {};
         if (!org_code || !org_name || !email || !password)
@@ -75,6 +88,13 @@ let OrgsController = class OrgsController {
         }
     }
 };
+__decorate([
+    Get('mine'),
+    __param(0, Req()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], OrgsController.prototype, "mine", null);
 __decorate([
     Post('register'),
     __param(0, Body()),

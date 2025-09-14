@@ -21,6 +21,10 @@ export declare class SpecController {
         invite_token: string;
         expires: string;
     }>;
+    appSettings(): Promise<any>;
+    listClientConfigs(clientId: string, req: any): Promise<{
+        rows: any[];
+    }>;
     acceptViaPath(short: string, token: string, body: any, req?: any): Promise<{
         ok: boolean;
     }>;

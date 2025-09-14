@@ -21,7 +21,25 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({ client_code, identifier: email, password }),
   })
   if (!r.ok) {
-    return NextResponse.json({ ok: false, error: 'Invalid credentials' }, { status: 401 })
+    if (r.status === 429) {
+      const retry = r.headers.get('retry-after')
+      let inMinutes = ''
+      if (retry) {
+        const secs = Number(retry)
+        if (!Number.isNaN(secs) && secs > 0) {
+          const mins = Math.ceil(secs / 60)
+          inMinutes = mins > 1 ? `${mins} minutes` : 'about a minute'
+        }
+      }
+      const msg = `For your security, sign-in is temporarily locked due to too many attempts. ${inMinutes?`Please try again in ${inMinutes}, `:''}or reset your password.`
+      return NextResponse.json({ ok: false, error: msg }, { status: 429 })
+    }
+    if (r.status === 423) {
+      const msg = 'Your account is temporarily locked. Please try again later or reset your password.'
+      return NextResponse.json({ ok: false, error: msg }, { status: 423 })
+    }
+    // Default friendly message
+    return NextResponse.json({ ok: false, error: 'We couldn’t sign you in with those details. Please check your client code, email or username, and password.' }, { status: 401 })
   }
   const { token, refresh_token, refresh_expires } = await r.json()
 

@@ -26,7 +26,7 @@ export default function ClientRegisterForm({ csrf }: { csrf: string }){
         fd.set('name', values.name)
         const r = await fetch('/api/register/client', { method:'POST', body: fd, credentials: 'same-origin' })
         if (r.ok) { success('Client created'); router.push('/admin/clients'); return }
-        try { const data = await r.json(); const msg = data?.message || data?.error || 'Create client failed'; setServerError(msg); toastError(msg) } catch { setServerError('Create client failed'); toastError('Create client failed') }
+        try { const data = await r.json(); const msg = data?.message || data?.error || 'We couldn’t create the client. Please try again or contact support.'; setServerError(msg); toastError(msg) } catch { const msg = 'We couldn’t create the client. Please try again or contact support.'; setServerError(msg); toastError(msg) }
       })}>
         <FormField name="name" control={control} render={({ field }: any)=> (
           <FormItem><FormLabel htmlFor="name">Client Name</FormLabel><FormControl><Input id="name" placeholder="Customer Co." {...field} /></FormControl><FormMessage name="name" /></FormItem>

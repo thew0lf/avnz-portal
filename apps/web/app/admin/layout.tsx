@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useLocalStorage } from './useLocalStorage'
 import { Input } from '@/components/ui/input'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Badge } from '@/components/ui/badge'
 
 type SectionProps = {
   title: string
@@ -34,7 +38,7 @@ function Section({ title, icon, children, defaultOpen = true }: SectionProps) {
 
 function MenuLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link className="px-2 py-1 rounded hover:bg-gray-100 underline-offset-2 hover:underline" href={href}>
+    <Link className="px-2 py-1 touchable rounded hover:bg-gray-100 underline-offset-2 hover:underline" href={href}>
       {children}
     </Link>
   )
@@ -110,13 +114,22 @@ const Icons = {
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false)
   const [apiBase, setApiBase] = useLocalStorage<string>('apiBase', process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001')
   const [orgId, setOrgId] = useLocalStorage<string>('orgId', '')
   const [roles, setRoles] = useLocalStorage<string>('roles', 'org')
+  const [projectCode, setProjectCode] = useLocalStorage<string>('projectCode', '')
+  const [projects, setProjects] = useState<any[]>([])
+  // Avoid SSR/CSR mismatches: render after mount so localStorage-backed values don't differ
+  useState(() => { /* noop to ensure hook order */ })
+  useEffect(() => { setMounted(true) }, [])
+  async function loadProjects(){
+    try { const r = await fetch('/api/projects/mine'); const d = await r.json(); setProjects(d.rows||[]) } catch {}
+  }
   const canAdmin = roles.split(',').map((s) => s.trim()).includes('org')
   return (
-    <div className="grid grid-cols-[280px_1fr] min-h-screen">
-      <aside className="border-r p-4 space-y-3 bg-white">
+    <div className="grid md:grid-cols-[280px_1fr] min-h-screen">
+      <aside className="hidden md:block border-r p-4 space-y-3 bg-white">
         <div className="flex items-center gap-2">
           {Icons.dashboard}
           <h2 className="text-lg font-semibold">Admin Portal</h2>
@@ -147,6 +160,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Section>
           <Section title="Security" icon={Icons.shield}>
             <MenuLink href="/admin/security">Security Settings</MenuLink>
+            <MenuLink href="/admin/secrets">Service Secrets</MenuLink>
           </Section>
           <Section title="Billing & Analytics" icon={Icons.billing}>
             <MenuLink href="/admin/pricing">Pricing Rules</MenuLink>
@@ -155,6 +169,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Section>
           <Section title="Governance" icon={Icons.shield}>
             <MenuLink href="/admin/compliance">Compliance</MenuLink>
+            <MenuLink href="/admin/templates">Templates</MenuLink>
           </Section>
           <Section title="Settings" icon={Icons.settings}>
             <label className="text-sm block mb-1">API Base<Input value={apiBase} onChange={(e) => setApiBase(e.target.value)} /></label>
@@ -168,7 +183,187 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Section>
         </nav>
       </aside>
-      <main className="p-6">{children}</main>
+      <main className="container py-4 md:py-6" suppressHydrationWarning>
+        <div className="flex items-center justify-between mb-4">
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger className="touchable border rounded px-2 bg-white">Menu</SheetTrigger>
+              <SheetContent side="left">
+                <SheetHeader>
+                  <SheetTitle>Navigation</SheetTitle>
+                </SheetHeader>
+                <div className="p-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    {Icons.dashboard}
+                    <h2 className="text-lg font-semibold">Admin Portal</h2>
+                  </div>
+                  <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="overview">
+                      <AccordionTrigger>Overview</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin">Dashboard</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="tenants">
+                      <AccordionTrigger>Tenants</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin/clients">Clients</MenuLink>
+                        <MenuLink href="/admin/clients/manage">Manage Client Managers</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="projects">
+                      <AccordionTrigger>Projects</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin/projects">Projects</MenuLink>
+                        <MenuLink href="/admin/project-members">Project Members</MenuLink>
+                        <MenuLink href="/admin/documents">Documents</MenuLink>
+                        <MenuLink href="/admin/search">Search</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="access">
+                      <AccordionTrigger>Access Control</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin/members">Members</MenuLink>
+                        <MenuLink href="/admin/roles">Roles &amp; Permissions</MenuLink>
+                        <MenuLink href="/admin/invites">Invites</MenuLink>
+                        <MenuLink href="/admin/authz/roles">AuthZ Roles</MenuLink>
+                        <MenuLink href="/admin/authz/actions">AuthZ Actions</MenuLink>
+                        <MenuLink href="/admin/authz/permissions">AuthZ Permissions</MenuLink>
+                        <MenuLink href="/admin/authz/nodes">AuthZ Nodes</MenuLink>
+                        <MenuLink href="/admin/authz/routes">AuthZ Routes</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="security">
+                      <AccordionTrigger>Security</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin/security">Security Settings</MenuLink>
+                        <MenuLink href="/admin/secrets">Service Secrets</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="billing">
+                      <AccordionTrigger>Billing & Analytics</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin/pricing">Pricing Rules</MenuLink>
+                        <MenuLink href="/admin/pricing/test">Pricing Simulator</MenuLink>
+                        <MenuLink href="/admin/usage">Usage</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="governance">
+                      <AccordionTrigger>Governance</AccordionTrigger>
+                      <AccordionContent>
+                        <MenuLink href="/admin/compliance">Compliance</MenuLink>
+                        <MenuLink href="/admin/templates">Templates</MenuLink>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  <div className="pt-2"><SheetClose className="touchable border rounded px-2 w-full">Close</SheetClose></div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            {mounted && (
+              <Dropdown label="Org" storageKey="orgFilter" placeholder="All Orgs" showSelection={false} buttonText="Org" optionsProvider={async()=>{ try{ const r=await fetch('/api/orgs'); const d=await r.json(); return [{id:'',name:'All Orgs'}, ...((d.rows||[]).map((o:any)=>({ id:o.id, name:o.name })))] } catch { return [{id:'',name:'All Orgs'}] } }} />
+            )}
+            <span>/</span>
+            {mounted && (
+              <Dropdown label="Clients" storageKey="clientFilter" placeholder="All Clients" optionsProvider={async()=>{
+                try { const r = await fetch('/api/clients'); const d = await r.json(); return [{id:'',name:'All Clients'}, ...((d.rows||[]).map((c:any)=>({id:c.id, name: c.name})))] } catch { return [{id:'',name:'All Clients'}] }
+              }} />
+            )}
+            <span>/</span>
+            {mounted && (<ProjectDropdown projectCode={projectCode} setProjectCode={setProjectCode} loadProjects={loadProjects} projects={projects} />)}
+            <span>/</span>
+            {mounted && (<UsersDropdown />)}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <button className="px-2 py-1 rounded border">Export</button>
+          </div>
+        </div>
+        {mounted ? children : null}
+      </main>
     </div>
   )
 }
+
+function ProjectDropdown({ projectCode, setProjectCode, loadProjects, projects }: any){
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const filtered = projects.filter((p:any)=> (p.name||'').toLowerCase().includes(q.toLowerCase()) || (p.code||'').toLowerCase().includes(q.toLowerCase()))
+  async function setContextProject(code: string){
+    try { await fetch('/api/admin/context', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ projectCode: code }) }) } catch {}
+  }
+  return (
+    <div className="relative inline-flex items-center gap-1">
+      <span>Projects</span>
+      <button className="border rounded h-8 px-2 bg-white" onClick={()=>{ setOpen(!open); if(!projects.length) loadProjects() }}>{projectCode? (projects.find((p:any)=>String(p.code||'')===String(projectCode))?.name || 'Selected') : 'All Projects'}</button>
+      {open && (
+        <div className="absolute z-10 mt-1 w-64 bg-white border rounded shadow">
+          <div className="p-2"><input className="w-full border rounded px-2 h-8" placeholder="Search projects" value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} /></div>
+          <div className="max-h-64 overflow-auto">
+            <button className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setProjectCode(''); setContextProject(''); setOpen(false) }}>All Projects</button>
+            {filtered.map((p:any)=>(<button key={p.id} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ const code=String(p.code||''); setProjectCode(code); setContextProject(code); setOpen(false) }}>{p.name}{p.code?` (${p.code})`:''}</button>))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UsersDropdown(){
+  const [open, setOpen] = useState(false)
+  const [items, setItems] = useState<any[]>([])
+  const [q, setQ] = useState('')
+  const [value, setValue] = useLocalStorage<string>('userFilter','')
+  async function setContextUser(id: string){
+    try { await fetch('/api/admin/context', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ userFilter: id }) }) } catch {}
+  }
+  async function load(){ if (items.length) return; try{ const r=await fetch('/api/memberships'); const d=await r.json(); setItems((d.rows||[]).map((m:any)=>({ id:m.user_id, name: m.email || m.username || m.user_id }))) } catch{} }
+  const filtered = items.filter(i=> i.name.toLowerCase().includes(q.toLowerCase()))
+  return (
+    <div className="relative">
+      <button className="border rounded h-8 px-2 bg-white" onClick={()=>{ setOpen(!open); if(!items.length) load() }}>Users</button>
+      {open && (
+        <div className="absolute z-10 mt-1 w-64 bg-white border rounded shadow">
+          <div className="p-2"><input className="w-full border rounded px-2 h-8" placeholder="Search users" value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} /></div>
+          <div className="max-h-64 overflow-auto">
+            <button className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setValue(''); setContextUser(''); setOpen(false) }}>All Users</button>
+            {filtered.map((i:any)=>(<button key={i.id} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setValue(i.id); setContextUser(i.id); setOpen(false) }}>{i.name}</button>))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Dropdown({ label, storageKey, placeholder, optionsProvider, showSelection = true, buttonText }:{ label:string; storageKey:string; placeholder:string; optionsProvider: ()=>Promise<any[]>; showSelection?: boolean; buttonText?: string }){
+  const [items, setItems] = useState<any[]>([])
+  const [q, setQ] = useState('')
+  const [value, setValue] = useLocalStorage<string>(storageKey,'')
+  async function setContext(key: string, id: string){
+    try { await fetch('/api/admin/context', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ [key]: id }) }) } catch {}
+  }
+  async function load(){ if (!items.length){ try{ const opts=await optionsProvider(); setItems(opts) } catch{} } }
+  const filtered = items.filter((i:any)=> (i.name||'').toLowerCase().includes(q.toLowerCase()))
+  const buttonLabel = buttonText || (showSelection ? (value? (items.find((i:any)=>String(i.id)===String(value))?.name || 'Selected') : placeholder) : label)
+  return (
+    <div className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button className="border rounded h-8 px-2 bg-white" onClick={()=>load()}>{buttonLabel}</button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64">
+          <div className="p-2"><input className="w-full border rounded px-2 h-8" placeholder={`Search ${label.toLowerCase()}`} value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} /></div>
+          <div className="max-h-64 overflow-auto">
+            <button className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setValue(''); setContext(storageKey, '') }}>{placeholder}</button>
+            {filtered.map((i:any)=>(<button key={i.id} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ const id=String(i.id); setValue(id); setContext(storageKey, id) }}>{i.name}</button>))}
+          </div>
+        </PopoverContent>
+      </Popover>
+      {!!value && <Badge variant="secondary">Set</Badge>}
+    </div>
+  )
+}
+
+// Mobile menu now uses shadcn-style Sheet in the header above

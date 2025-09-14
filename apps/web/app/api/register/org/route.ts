@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: r.status })
   }
   const { token, refresh_token } = await r.json()
-  const res = NextResponse.redirect(new URL('/register/client', req.url))
+  const res = NextResponse.redirect(new URL('/admin', req.url))
   res.cookies.set(getCookieName(), token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60*60*8 })
   if (refresh_token) res.cookies.set('refresh_token', refresh_token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60*60*24*30 })
   return res

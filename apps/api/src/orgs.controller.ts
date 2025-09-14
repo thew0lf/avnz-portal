@@ -1,10 +1,20 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common'
+import { Controller, Post, Body, BadRequestException, Get, Req } from '@nestjs/common'
 import { pool } from './db.js'
 import { hashPassword, scryptHash, signToken, randomToken, sha256hex } from './auth.util.js'
 import { validatePassword } from './security.js'
 
 @Controller('orgs')
 export class OrgsController {
+  @Get('mine')
+  async mine(@Req() req: any) {
+    const userId = req?.auth?.userId
+    if (!userId) throw new BadRequestException('unauthorized')
+    const c = await pool.connect()
+    try {
+      const r = await c.query(`select o.id, o.code, o.name from organizations o join memberships m on m.org_id=o.id where m.user_id=$1 group by o.id, o.code, o.name order by o.name`, [userId])
+      return { rows: r.rows }
+    } finally { c.release() }
+  }
   @Post('register')
   async register(@Body() body: any) {
     const { org_code, org_name, email, username, password } = body || {}

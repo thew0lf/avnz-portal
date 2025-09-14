@@ -14,6 +14,7 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, BadRequestException,
 import { pool } from './db.js';
 import { Authz, RbacGuard } from './authz/rbac.guard.js';
 import { audit } from './audit.js';
+import { enc } from './crypto.util.js';
 let AdminController = class AdminController {
     // Security settings
     async getSec(_nodeId) { const c = await pool.connect(); try {
@@ -60,6 +61,137 @@ let AdminController = class AdminController {
         const before = (await c.query('select * from authz.route_registry where id=$1', [id])).rows[0];
         await c.query('delete from authz.route_registry where id=$1', [id]);
         await audit(req, 'delete', 'authz.route', id, before, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    // Templates CRUD (email/sms)
+    async listEmailTemplates(key, client_id) { const c = await pool.connect(); try {
+        const args = [];
+        let sql = 'select id, key, client_id, subject, body, created_at, updated_at from email_templates';
+        const cond = [];
+        if (key) {
+            args.push(key);
+            cond.push(`key=$${args.length}`);
+        }
+        if (client_id) {
+            args.push(client_id);
+            cond.push(`client_id=$${args.length}`);
+        }
+        if (cond.length)
+            sql += ' where ' + cond.join(' and ');
+        sql += ' order by key, client_id nulls first';
+        const r = await c.query(sql, args);
+        return { rows: r.rows };
+    }
+    finally {
+        c.release();
+    } }
+    async upsertEmailTemplate(b, req) { const { id, key, client_id, subject, body } = b || {}; if (!key || !subject || !body)
+        throw new BadRequestException('key, subject, body required'); const c = await pool.connect(); try {
+        const r = await c.query('insert into email_templates(id,key,client_id,subject,body) values (coalesce($1,gen_random_uuid()),$2,$3,$4,$5) on conflict (id) do update set key=excluded.key, client_id=excluded.client_id, subject=excluded.subject, body=excluded.body, updated_at=now() returning id,key,client_id,subject,body', [id || null, key, client_id || null, subject, body]);
+        await audit(req, 'upsert', 'template.email', r.rows[0]?.id, null, r.rows[0]);
+        return r.rows[0];
+    }
+    finally {
+        c.release();
+    } }
+    async delEmailTemplate(id, req) { const c = await pool.connect(); try {
+        const before = (await c.query('select * from email_templates where id=$1', [id])).rows[0];
+        await c.query('delete from email_templates where id=$1', [id]);
+        await audit(req, 'delete', 'template.email', id, before, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    async listSmsTemplates(key, client_id) { const c = await pool.connect(); try {
+        const args = [];
+        let sql = 'select id, key, client_id, body, created_at, updated_at from sms_templates';
+        const cond = [];
+        if (key) {
+            args.push(key);
+            cond.push(`key=$${args.length}`);
+        }
+        if (client_id) {
+            args.push(client_id);
+            cond.push(`client_id=$${args.length}`);
+        }
+        if (cond.length)
+            sql += ' where ' + cond.join(' and ');
+        sql += ' order by key, client_id nulls first';
+        const r = await c.query(sql, args);
+        return { rows: r.rows };
+    }
+    finally {
+        c.release();
+    } }
+    async upsertSmsTemplate(b, req) { const { id, key, client_id, body } = b || {}; if (!key || !body)
+        throw new BadRequestException('key, body required'); const c = await pool.connect(); try {
+        const r = await c.query('insert into sms_templates(id,key,client_id,body) values (coalesce($1,gen_random_uuid()),$2,$3,$4) on conflict (id) do update set key=excluded.key, client_id=excluded.client_id, body=excluded.body, updated_at=now() returning id,key,client_id,body', [id || null, key, client_id || null, body]);
+        await audit(req, 'upsert', 'template.sms', r.rows[0]?.id, null, r.rows[0]);
+        return r.rows[0];
+    }
+    finally {
+        c.release();
+    } }
+    async delSmsTemplate(id, req) { const c = await pool.connect(); try {
+        const before = (await c.query('select * from sms_templates where id=$1', [id])).rows[0];
+        await c.query('delete from sms_templates where id=$1', [id]);
+        await audit(req, 'delete', 'template.sms', id, before, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    // Service configuration (encrypted)
+    async listServiceConfigs(nodeId, service, client_id) { const c = await pool.connect(); try {
+        const args = [nodeId || null];
+        let sql = 'select id, org_id, client_id, service, name, created_at, updated_at from service_configs where org_id=$1';
+        if (service) {
+            args.push(service);
+            sql += ' and service=$2';
+        }
+        if (client_id) {
+            args.push(client_id);
+            sql += service ? ' and client_id=$3' : ' and client_id=$2';
+        }
+        sql += ' order by service, name';
+        const r = await c.query(sql, args);
+        return { rows: r.rows };
+    }
+    finally {
+        c.release();
+    } }
+    async upsertServiceConfig(b, nodeId, req) { const { id, service, name, value, client_id } = b || {}; if (!service || !name || typeof value !== 'string')
+        throw new BadRequestException('service, name, value required'); const secret = process.env.AUTH_SECRET || 'dev-secret-change-me'; const value_enc = enc(value, secret); const c = await pool.connect(); try {
+        const r = await c.query('insert into service_configs(id,org_id,client_id,service,name,value_enc) values (coalesce($1,gen_random_uuid()),$2,$3,$4,$5,$6) on conflict (org_id,client_id,service,name) do update set value_enc=excluded.value_enc, updated_at=now() returning id, org_id, client_id, service, name, created_at, updated_at', [id || null, nodeId, client_id || null, service, name, value_enc]);
+        await audit(req, 'upsert', 'service.config', r.rows[0]?.id, null, { service, name, client_id: client_id || null });
+        return r.rows[0];
+    }
+    finally {
+        c.release();
+    } }
+    async delServiceConfig(id, req) { const c = await pool.connect(); try {
+        const before = (await c.query('select * from service_configs where id=$1', [id])).rows[0];
+        await c.query('delete from service_configs where id=$1', [id]);
+        await audit(req, 'delete', 'service.config', id, before, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    // Budget
+    async getBudget(nodeId) { const c = await pool.connect(); try {
+        const r = await c.query('select monthly_limit_usd from budgets where org_id=$1', [nodeId]);
+        return { monthly_limit_usd: r.rows[0]?.monthly_limit_usd || 0 };
+    }
+    finally {
+        c.release();
+    } }
+    async setBudget(nodeId, b) { const limit = Number(b?.monthly_limit_usd || 0); const c = await pool.connect(); try {
+        await c.query('insert into budgets(org_id, monthly_limit_usd) values ($1,$2) on conflict (org_id) do update set monthly_limit_usd=excluded.monthly_limit_usd, updated_at=now()', [nodeId, limit]);
         return { ok: true };
     }
     finally {
@@ -321,6 +453,100 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deleteRoute", null);
+__decorate([
+    Get('templates/email'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Query('key')),
+    __param(1, Query('client_id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "listEmailTemplates", null);
+__decorate([
+    Post('templates/email'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "upsertEmailTemplate", null);
+__decorate([
+    Delete('templates/email/:id'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "delEmailTemplate", null);
+__decorate([
+    Get('templates/sms'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Query('key')),
+    __param(1, Query('client_id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "listSmsTemplates", null);
+__decorate([
+    Post('templates/sms'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "upsertSmsTemplate", null);
+__decorate([
+    Delete('templates/sms/:id'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "delSmsTemplate", null);
+__decorate([
+    Get('services/configs'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Query('nodeId')),
+    __param(1, Query('service')),
+    __param(2, Query('client_id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "listServiceConfigs", null);
+__decorate([
+    Post('services/configs'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Body()),
+    __param(1, Query('nodeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "upsertServiceConfig", null);
+__decorate([
+    Delete('services/configs/:id'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "delServiceConfig", null);
+__decorate([
+    Get('budget'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Query('nodeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getBudget", null);
+__decorate([
+    Post('budget'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Query('nodeId')),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "setBudget", null);
 __decorate([
     Get('roles'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),

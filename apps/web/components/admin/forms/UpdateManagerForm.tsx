@@ -20,7 +20,7 @@ export default function UpdateManagerForm({ clientId, onSaved }: { clientId: str
       setServerError(null)
       setSaved(false)
       const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: `/clients/${clientId}/manager`, method: 'POST', body: { identifier: values.identifier } }) })
-      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'Save failed'; setServerError(msg); toastError(msg) } catch { setServerError('Save failed'); toastError('Save failed') } return }
+      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'We couldn’t save your changes. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t save your changes. Please try again.'; setServerError(m); toastError(m) } return }
       setSaved(true)
       reset({ identifier: '' })
       success('Manager updated')

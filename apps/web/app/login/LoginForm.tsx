@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useToast } from '@/components/ui/toast-provider'
 
 const schema = z.object({
@@ -20,12 +20,17 @@ const schema = z.object({
     .regex(/[^A-Za-z0-9]/, 'Must include a symbol'),
 })
 
-export default function LoginForm({ defaultValues, nextPath, csrf }: { defaultValues: any; nextPath: string; csrf: string }){
+export default function LoginForm({ defaultValues, nextPath, csrf, flash }: { defaultValues: any; nextPath: string; csrf: string; flash?: string }){
   const methods = useForm({ resolver: zodResolver(schema), mode: 'onSubmit', defaultValues })
   const { handleSubmit, control, formState: { isSubmitting } } = methods
   const router = useRouter()
   const [serverError, setServerError] = useState<string| null>(null)
   const { success, error: toastError } = useToast()
+  useEffect(()=>{
+    if (flash === 'reset-sent') {
+      success("If an account exists, we've sent a reset link")
+    }
+  }, [flash, success])
   return (
     <RHFProvider methods={methods}>
       <UIForm className="space-y-4" onSubmit={handleSubmit(async (values:any)=>{
@@ -38,7 +43,7 @@ export default function LoginForm({ defaultValues, nextPath, csrf }: { defaultVa
         fd.set('next', nextPath)
         const r = await fetch('/api/login', { method: 'POST', body: fd, credentials: 'same-origin' })
         if (r.ok) { success('Signed in'); router.push(nextPath || '/admin'); return }
-        try { const data = await r.json(); const msg = data?.message || data?.error || 'Sign in failed'; setServerError(msg); toastError(msg) } catch { setServerError('Sign in failed'); toastError('Sign in failed') }
+        try { const data = await r.json(); const msg = data?.message || data?.error || 'We couldn’t sign you in. Please check your details and try again.'; setServerError(msg); toastError(msg) } catch { const msg = 'We couldn’t sign you in. Please check your details and try again.'; setServerError(msg); toastError(msg) }
       })}>
         <FormField name="client_code" control={control} render={({ field }: any) => (
           <FormItem>

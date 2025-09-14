@@ -61,7 +61,8 @@ async function runMigrations(client: any) {
       ['manage_pricing','Create and update pricing rules'],
       ['view_usage','View usage summaries'],
       ['ingest','Ingest documents'],
-      ['search','Perform semantic search']
+      ['search','Perform semantic search'],
+      ['view_client_secrets','View client-scoped service secrets (read-only)']
     ];
     for (const [key, desc] of perms) {
       await client.query('insert into permissions(key,description) values ($1,$2) on conflict (key) do nothing', [key, desc]);
