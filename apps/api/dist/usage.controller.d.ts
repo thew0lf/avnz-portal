@@ -8,7 +8,10 @@ type ReqX = Request & {
     };
 };
 export declare class UsageController {
-    summary(req: ReqX, from?: string, to?: string, by?: string, userId?: string, projectId?: string, projectCode?: string): Promise<{
+    timeseries(req: ReqX, from?: string, to?: string, interval?: string, projectId?: string, projectCode?: string, clientId?: string, userId?: string): Promise<{
+        rows: any;
+    }>;
+    summary(req: ReqX, from?: string, to?: string, by?: string, userId?: string, projectId?: string, projectCode?: string, clientId?: string): Promise<{
         from: string;
         to: string;
         groupBy: string[];

@@ -4,6 +4,8 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import ClientCreateForm from '@/components/admin/forms/ClientCreateForm'
 import { revalidatePath } from 'next/cache'
 
@@ -30,23 +32,24 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
         <Input name="q" placeholder="Search clients" defaultValue={q} className="w-64" />
         <Button type="submit">Search</Button>
       </form>
+      {q && (<div className="mt-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="text-left text-muted-foreground border-b">
-            <tr><th className="py-2 pr-4">Code</th><th className="py-2 pr-4">Name</th><th className="py-2 pr-4">Manager</th><th className="py-2 pr-4">Created</th><th className="py-2 pr-4">Actions</th></tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <tr><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Manager</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></tr>
+          </TableHeader>
+          <TableBody>
             {rows.map((r:any)=>(
-              <tr key={r.id} className="border-b last:border-0">
-                <td className="py-2 pr-4">{r.code}</td>
-                <td className="py-2 pr-4">{r.name}</td>
-                <td className="py-2 pr-4">{r.manager_email||'-'}</td>
-                <td className="py-2 pr-4">{new Date(r.created_at).toLocaleString()}</td>
-                <td className="py-2 pr-4"><a className="underline" href="/admin/clients/manage">Manage</a></td>
-              </tr>
+              <TableRow key={r.id}>
+                <TableCell>{r.code}</TableCell>
+                <TableCell>{r.name}</TableCell>
+                <TableCell>{r.manager_email||'-'}</TableCell>
+                <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
+                <TableCell><a className="underline" href="/admin/clients/manage">Manage</a></TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         <div className="flex justify-between items-center mt-3">
           <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
           <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>

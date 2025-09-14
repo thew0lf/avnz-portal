@@ -39,8 +39,8 @@ export default function RegisterOrgForm({ csrf }: { csrf: string }){
         if (values.username) fd.set('username', values.username)
         fd.set('password', values.password)
         const r = await fetch('/api/register/org', { method: 'POST', body: fd, credentials: 'same-origin' })
-        if (r.ok) { success('Organization created'); router.push('/register/client'); return }
-        try { const data = await r.json(); const msg = data?.message || data?.error || 'Registration failed'; setServerError(msg); toastError(msg) } catch { setServerError('Registration failed'); toastError('Registration failed') }
+        if (r.ok) { success('Organization created'); router.push('/admin'); return }
+        try { const data = await r.json(); const msg = data?.message || data?.error || 'We couldn’t complete registration right now. Please try again or contact support.'; setServerError(msg); toastError(msg) } catch { const msg='We couldn’t complete registration right now. Please try again or contact support.'; setServerError(msg); toastError(msg) }
       })}>
         <FormField name="org_code" control={control} render={({ field }: any)=> (
           <FormItem><FormLabel htmlFor="org_code">Org Code</FormLabel><FormControl><Input id="org_code" placeholder="acme" {...field} /></FormControl><FormMessage name="org_code" /></FormItem>

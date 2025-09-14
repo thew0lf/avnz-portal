@@ -13,6 +13,33 @@ export declare class AdminController {
     deleteRoute(id: string, _nodeId?: string, req?: any): Promise<{
         ok: boolean;
     }>;
+    listEmailTemplates(key?: string, client_id?: string): Promise<{
+        rows: any[];
+    }>;
+    upsertEmailTemplate(b: any, req?: any): Promise<any>;
+    delEmailTemplate(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listSmsTemplates(key?: string, client_id?: string): Promise<{
+        rows: any[];
+    }>;
+    upsertSmsTemplate(b: any, req?: any): Promise<any>;
+    delSmsTemplate(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listServiceConfigs(nodeId?: string, service?: string, client_id?: string): Promise<{
+        rows: any[];
+    }>;
+    upsertServiceConfig(b: any, nodeId?: string, req?: any): Promise<any>;
+    delServiceConfig(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    getBudget(nodeId?: string): Promise<{
+        monthly_limit_usd: any;
+    }>;
+    setBudget(nodeId?: string, b?: any): Promise<{
+        ok: boolean;
+    }>;
     listRoles(_nodeId?: string, q?: string, limit?: string, offset?: string): Promise<{
         rows: any[];
         limit: number;

@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import PricingRuleForm from '@/components/admin/forms/PricingRuleForm'
 
 // SPA handled via PricingRuleForm
@@ -29,36 +30,36 @@ export default async function PricingPage() {
 
       <PricingRuleForm />
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="text-left text-muted-foreground border-b">
+        <Table>
+          <TableHeader>
             <tr>
-              <th className="py-2 pr-4">Scope</th>
-              <th className="py-2 pr-4">Org</th>
-              <th className="py-2 pr-4">Role</th>
-              <th className="py-2 pr-4">User</th>
-              <th className="py-2 pr-4">Provider</th>
-              <th className="py-2 pr-4">Model</th>
-              <th className="py-2 pr-4">Metric</th>
-              <th className="py-2 pr-4">$/1k</th>
-              <th className="py-2 pr-4">Active</th>
+              <TableHead>Scope</TableHead>
+              <TableHead>Org</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Provider</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Metric</TableHead>
+              <TableHead>$/1k</TableHead>
+              <TableHead>Active</TableHead>
             </tr>
-          </thead>
-          <tbody>
+          </TableHeader>
+          <TableBody>
             {rows.map((r, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="py-2 pr-4">{r.scope}</td>
-                <td className="py-2 pr-4">{r.org_id || ''}</td>
-                <td className="py-2 pr-4">{r.role || ''}</td>
-                <td className="py-2 pr-4">{r.user_id || ''}</td>
-                <td className="py-2 pr-4">{r.provider}</td>
-                <td className="py-2 pr-4">{r.model}</td>
-                <td className="py-2 pr-4">{r.metric}</td>
-                <td className="py-2 pr-4">{Number(r.price_per_1k).toFixed(3)}</td>
-                <td className="py-2 pr-4">{String(r.active)}</td>
-              </tr>
+              <TableRow key={i}>
+                <TableCell>{r.scope}</TableCell>
+                <TableCell>{r.org_id || ''}</TableCell>
+                <TableCell>{r.role || ''}</TableCell>
+                <TableCell>{r.user_id || ''}</TableCell>
+                <TableCell>{r.provider}</TableCell>
+                <TableCell>{r.model}</TableCell>
+                <TableCell>{r.metric}</TableCell>
+                <TableCell>{Number(r.price_per_1k).toFixed(3)}</TableCell>
+                <TableCell>{String(r.active)}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </main>
   )

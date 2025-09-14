@@ -4,7 +4,9 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import { RSelect, RSelectTrigger, RSelectContent, RSelectItem, RSelectValue } from '@/components/ui/rselect'
+import SearchableRSelect from '@/components/ui/searchable-rselect'
+import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-provider'
 
@@ -16,7 +18,8 @@ const schema = z.object({
 type Values = z.infer<typeof schema>
 
 export default function MembersAddForm({ roles, onSaved }: { roles: Array<{ id: string; name: string }>; onSaved?: () => void }) {
-  const { register, handleSubmit, formState: { isSubmitting, errors }, reset } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { role: 'user' } as any })
+  const { register, handleSubmit, formState: { isSubmitting, errors }, reset, setValue, watch } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { role: 'user' } as any })
+  const roleSel = watch('role_id')
   const [serverError, setServerError] = useState<string | null>(null)
   const { success, error: toastError } = useToast()
   return (
@@ -26,7 +29,7 @@ export default function MembersAddForm({ roles, onSaved }: { roles: Array<{ id: 
       if (v.role) body.role = v.role
       if (v.role_id) body.role_id = v.role_id
       const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: '/memberships', method: 'POST', body }) })
-      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'Save failed'; setServerError(msg); toastError(msg) } catch { setServerError('Save failed'); toastError('Save failed') } return }
+      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'We couldn’t save your changes. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t save your changes. Please try again.'; setServerError(m); toastError(m) } return }
       reset({ identifier: '', role: 'user', role_id: '' })
       success('Member added/updated')
       onSaved?.()
@@ -42,10 +45,13 @@ export default function MembersAddForm({ roles, onSaved }: { roles: Array<{ id: 
       </div>
       <div>
         <label className="block text-sm text-muted-foreground">Role (select)</label>
-        <Select {...register('role_id')}>
-          <option value="">-- optional --</option>
-          {roles.map((r:any)=>(<option key={r.id} value={r.id}>{r.name}</option>))}
-        </Select>
+        <input type="hidden" {...register('role_id')} />
+        <SearchableRSelect
+          value={roleSel || ''}
+          onValueChange={(v)=>setValue('role_id', v, { shouldValidate: true })}
+          placeholder="-- optional --"
+          items={[{value:'',label:'-- optional --'}, ...roles.map((r:any)=>({ value:r.id, label:r.name, group: `Level ${r.level ?? '—'}` }))]}
+        />
       </div>
       <div>
         <Button type="submit" disabled={isSubmitting}>Add / Update</Button>

@@ -1,7 +1,8 @@
 "use client"
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import SearchableRSelect from '@/components/ui/searchable-rselect'
+import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-provider'
 
@@ -38,10 +39,12 @@ export default function SearchPage() {
       <h1 className="text-xl font-semibold">Semantic Search</h1>
       <form method="post" onSubmit={onSearch} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search..." />
-        <Select value={project} onChange={(e)=>setProject((e.target as HTMLSelectElement).value)} onFocus={() => { if (!projects.length) loadProjects() }}>
-          <option value="">Select project (optional)</option>
-          {projects.map((p:any)=>(<option key={p.id} value={p.code||''}>{p.name}{p.code?` (${p.code})`:''}</option>))}
-        </Select>
+        <SearchableRSelect
+          value={project}
+          onValueChange={setProject}
+          placeholder="Select project (optional)"
+          items={[{value:'',label:'Select project (optional)'}, ...projects.map((p:any)=>({ value: p.code||'', label: `${p.name}${p.code?` (${p.code})`:''}` }))]}
+        />
         <Button disabled={loading} type="submit">{loading ? 'Searching...' : 'Search'}</Button>
       </form>
       <div className="space-y-3">

@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ActionButton } from '@/components/admin/ActionButton'
 import PermissionCreateForm from '@/components/admin/forms/PermissionCreateForm'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 
 async function createPerm(formData: FormData){ 'use server'
   const nodeId = String(formData.get('nodeId')||'')
@@ -18,11 +20,12 @@ async function createPerm(formData: FormData){ 'use server'
   revalidatePath('/admin/authz/permissions')
 }
 
-export default async function AuthzPermissions({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }){
+export default async function AuthzPermissions({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc' } }){
   const cookie = cookies().get(getCookieName()); const token = cookie?.value||''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/authz/permissions')
-  const nodeId = (session as any)?.orgUUID || ''
+  const orgOverride = cookies().get('orgFilter')?.value || ''
+  const nodeId = orgOverride || (session as any)?.orgUUID || ''
   const q = searchParams?.q || ''
   const limit = Number(searchParams?.limit || '20')
   const offset = Number(searchParams?.offset || '0')
@@ -33,6 +36,14 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
   const actionsRes = await apiFetch(`/admin/actions?nodeId=${encodeURIComponent(nodeId)}`)
   const actions = (await actionsRes.json().catch(()=>({rows:[]}))).rows||[]
   // deletion handled via ActionButton
+  const sort = (searchParams?.sort||'').toLowerCase()
+  const dir = (searchParams?.dir||'asc').toLowerCase()
+  const sorted = [...rows].sort((a:any,b:any)=>{
+    const vA = String(a[sort]||'').toLowerCase(); const vB = String(b[sort]||'').toLowerCase()
+    if (vA < vB) return dir==='asc'? -1: 1
+    if (vA > vB) return dir==='asc'? 1: -1
+    return 0
+  })
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">AuthZ Permissions</h1>
@@ -41,19 +52,40 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
         <Input name="q" placeholder="Search domain.resource.action" defaultValue={q} className="w-64" />
         <Button type="submit">Search</Button>
       </form>
-      <table className="min-w-full text-sm"><thead><tr><th className="text-left py-2 pr-4">Domain</th><th className="text-left py-2 pr-4">Resource</th><th className="text-left py-2 pr-4">Action</th><th className="text-left py-2 pr-4">Min Role</th><th className="py-2 pr-4">Actions</th></tr></thead>
-        <tbody>{rows.map((p:any)=>(
-          <tr key={p.id} className="border-b last:border-0">
-            <td className="py-2 pr-4">{p.domain}</td>
-            <td className="py-2 pr-4">{p.resource_type}</td>
-            <td className="py-2 pr-4">{p.action_name}</td>
-            <td className="py-2 pr-4">{p.min_role_id}</td>
-            <td className="py-2 pr-4">
-              <ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} />
-            </td>
-          </tr>
-        ))}</tbody>
-      </table>
+      {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
+      <div className="hidden md:block">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead><a href={`?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=domain&dir=${dir==='asc'?'desc':'asc'}`}>Domain</a></TableHead>
+            <TableHead><a href={`?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=resource_type&dir=${dir==='asc'?'desc':'asc'}`}>Resource</a></TableHead>
+            <TableHead><a href={`?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=action_name&dir=${dir==='asc'?'desc':'asc'}`}>Action</a></TableHead>
+            <TableHead><a href={`?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=min_role_id&dir=${dir==='asc'?'desc':'asc'}`}>Min Role</a></TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {(sort? sorted : rows).map((p:any)=>(
+            <TableRow key={p.id}>
+              <TableCell>{p.domain}</TableCell>
+              <TableCell>{p.resource_type}</TableCell>
+              <TableCell>{p.action_name}</TableCell>
+              <TableCell>{p.min_role_id}</TableCell>
+              <TableCell><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      </div>
+      <div className="md:hidden grid gap-2">
+        {(sort? sorted : rows).map((p:any)=>(
+          <div key={p.id} className="rounded border bg-white p-3">
+            <div className="text-sm font-medium">{p.domain}.{p.resource_type}.{p.action_name}</div>
+            <div className="mt-1"><Badge variant="outline">Min role: {p.min_role_id}</Badge></div>
+            <div className="mt-2"><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} /></div>
+          </div>
+        ))}
+      </div>
       <div className="flex justify-between items-center">
         <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${Math.max(0, offset - limit)}`}>Prev</a>
         <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>

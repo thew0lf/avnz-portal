@@ -4,21 +4,20 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-provider'
+import { useRouter } from 'next/navigation'
 
 export default function Forgot() {
   const [client, setClient] = useState('')
   const [email, setEmail] = useState('')
-  const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const { success, error: toastError } = useToast()
+  const router = useRouter()
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const r = await fetch('/api/auth/request-reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ client_code: client, email }) })
-    const data = await r.json().catch(()=>({ ok:false }))
-    setResult(data)
-    if (!r.ok) { toastError(String(data?.error || 'Failed to send reset')); } else { success('Reset link sent') }
-    setLoading(false)
+    await fetch('/api/auth/request-reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ client_code: client, email }) })
+    // Always redirect with generic success to prevent account enumeration
+    router.push('/login?msg=reset-sent')
   }
   return (
     <main className="p-6 flex justify-center">
@@ -29,15 +28,7 @@ export default function Forgot() {
             <Input value={client} onChange={(e)=>setClient(e.target.value)} placeholder="client code" />
             <Input value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="email" />
             <Button disabled={loading} type="submit">{loading ? 'Sending...' : 'Send reset link'}</Button>
-            {result && (
-              <div className="text-sm text-muted-foreground">
-                {result.reset_token ? (
-                  <div>Dev token: <code>{result.reset_token}</code></div>
-                ) : (
-                  <div>Check your email (simulated)</div>
-                )}
-              </div>
-            )}
+            {/* No details shown for SOC2 compliance */}
           </form>
         </CardContent>
       </Card>

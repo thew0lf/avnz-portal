@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import InviteCreateForm from '@/components/admin/forms/InviteCreateForm'
 import { ActionButton } from '@/components/admin/ActionButton'
 
@@ -38,32 +39,32 @@ export default async function InvitesPage() {
       <InviteCreateForm clients={clients} canSelectClient={canSelectClient} />
 
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="text-left text-muted-foreground border-b">
+        <Table>
+          <TableHeader>
             <tr>
-              <th className="py-2 pr-4">Email</th>
-              <th className="py-2 pr-4">Role</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Expires</th>
-              <th className="py-2 pr-4">Actions</th>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Expires</TableHead>
+              <TableHead>Actions</TableHead>
             </tr>
-          </thead>
-          <tbody>
+          </TableHeader>
+          <TableBody>
             {invites.map((iv:any)=>(
-              <tr key={iv.id} className="border-b last:border-0">
-                <td className="py-2 pr-4">{iv.email}</td>
-                <td className="py-2 pr-4">{iv.role || '-'}</td>
-                <td className="py-2 pr-4">{iv.revoked? 'revoked' : iv.used_at? 'used' : 'pending'}</td>
-                <td className="py-2 pr-4">{iv.expires_at ? new Date(iv.expires_at).toLocaleString() : '-'}</td>
-                <td className="py-2 pr-4">
+              <TableRow key={iv.id}>
+                <TableCell>{iv.email}</TableCell>
+                <TableCell>{iv.role || '-'}</TableCell>
+                <TableCell>{iv.revoked? 'revoked' : iv.used_at? 'used' : 'pending'}</TableCell>
+                <TableCell>{iv.expires_at ? new Date(iv.expires_at).toLocaleString('en-US',{ timeZone:'UTC' }) : '-'}</TableCell>
+                <TableCell>
                   {!iv.revoked && !iv.used_at && (
                     <ActionButton label="Revoke" variant="secondary" method="POST" path={`/clients/invites/${iv.id}/revoke`} onDone={()=>{ /* SSR list */ }} />
                   )}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </main>
   )

@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import SearchableRSelect from '@/components/ui/searchable-rselect'
+import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-provider'
 
@@ -30,13 +31,15 @@ export default function DocumentIngestForm({ projects }: { projects: Array<any> 
       </div>
       <div className="space-y-2">
         <Label htmlFor="project_code">Project (optional)</Label>
-        <Select id="project_code" name="project_code" value={project} onChange={(e)=>setProject((e.target as HTMLSelectElement).value)}>
-          <option value="">Select a project...</option>
-          {projects.map((p:any)=>(<option key={p.id} value={p.code||''}>{p.name}{p.code?` (${p.code})`:''}</option>))}
-        </Select>
+        <input type="hidden" name="project_code" value={project} />
+        <SearchableRSelect
+          value={project}
+          onValueChange={setProject}
+          placeholder="Select a project..."
+          items={[{value:'',label:'Select a project...'}, ...projects.map((p:any)=>({ value: p.code||'', label: `${p.name}${p.code?` (${p.code})`:''}` }))]}
+        />
       </div>
       <Button type="submit" disabled={loading}>{loading? 'Uploading...' : 'Upload'}</Button>
     </form>
   )
 }
-

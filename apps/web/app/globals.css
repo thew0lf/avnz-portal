@@ -74,4 +74,11 @@
     @apply bg-background text-foreground;
   }
 }
-body{ @apply bg-gray-50 text-gray-900; }
+body{ @apply bg-gray-50 text-gray-900; overflow-x: hidden; }
+
+/* Safe area helpers for notches */
+.sa-top { padding-top: env(safe-area-inset-top); }
+.sa-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Touch target utility */
+.touchable { min-height: 40px; padding: 0.5rem 0.75rem; }

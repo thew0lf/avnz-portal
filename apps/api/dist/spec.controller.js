@@ -11,6 +11,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Controller, Post, Get, Param, Body, Req, BadRequestException } from '@nestjs/common';
+import { ForbiddenException } from '@nestjs/common';
 import { pool } from './db.js';
 import { hashPassword } from './auth.util.js';
 import { audit } from './audit.js';
@@ -133,7 +134,9 @@ let SpecController = class SpecController {
             const clientNode = cl.rows[0];
             if (!clientNode)
                 throw new BadRequestException('invalid clientId');
-            const code = (await c.query('select code from clients where org_id=$1 limit 1', [clientId])).rows[0]?.code;
+            const row = (await c.query('select code, org_id from clients where org_id=$1 limit 1', [clientId])).rows[0];
+            const code = row?.code;
+            const orgId = row?.org_id || clientId;
             if (!code)
                 throw new BadRequestException('missing client short code');
             const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
@@ -142,7 +145,7 @@ let SpecController = class SpecController {
             await c.query('insert into client_invites(org_id, client_id, email, phone, role, role_id, token_hash, expires_at, revoked, delivery) values ($1,$2,$3,$4,$5,$6,$7,$8,false,$9)', [clientId, clientId, contact.email ? String(contact.email).toLowerCase() : null, contact.phone ? String(contact.phone) : null, null, roleId || null, require('crypto').createHash('sha256').update(token).digest('hex'), exp.toISOString(), delivery]);
             if (contact.email) {
                 try {
-                    await sendInviteEmail(contact.email, token, { clientName: clientNode.name });
+                    await sendInviteEmail(contact.email, token, { clientName: clientNode.name, clientId, orgId });
                 }
                 catch (e) {
                     console.warn('email fail', e);
@@ -150,7 +153,7 @@ let SpecController = class SpecController {
             }
             if (contact.phone) {
                 try {
-                    await sendInviteSms(contact.phone, token, { shortCode: code });
+                    await sendInviteSms(contact.phone, token, { shortCode: code, clientName: clientNode.name, clientId, orgId });
                 }
                 catch (e) {
                     console.warn('sms fail', e);
@@ -158,6 +161,40 @@ let SpecController = class SpecController {
             }
             await audit(req, 'create', 'invite', String(clientId), null, { delivery, email: contact.email || null, phone: contact.phone || null });
             return { ok: true, shortCode: code, invite_token: token, expires: exp.toISOString() };
+        }
+        finally {
+            c.release();
+        }
+    }
+    // Public app settings used by the web shell (branding, UI flags)
+    async appSettings() { const c = await pool.connect(); try {
+        const r = await c.query("select key,value from app_settings");
+        const obj = {};
+        for (const row of r.rows) {
+            obj[row.key] = row.value;
+        }
+        return obj;
+    }
+    finally {
+        c.release();
+    } }
+    // Client-scoped secrets (read-only) for users with view_client_secrets + membership
+    async listClientConfigs(clientId, req) {
+        const ctx = req.auth || {};
+        const userId = ctx.userId;
+        if (!userId)
+            throw new ForbiddenException('unauthorized');
+        const c = await pool.connect();
+        try {
+            // verify membership in client
+            const m = await c.query('select 1 from client_members where client_id=$1 and user_id=$2', [clientId, userId]);
+            if (!m.rows[0])
+                throw new ForbiddenException('membership required');
+            const perms = Array.isArray(ctx.perms) ? ctx.perms : [];
+            if (!perms.includes('view_client_secrets') && !perms.includes('admin'))
+                throw new ForbiddenException('view_client_secrets required');
+            const r = await c.query('select id, service, name, updated_at from service_configs where client_id=$1 order by service,name', [clientId]);
+            return { rows: r.rows };
         }
         finally {
             c.release();
@@ -256,6 +293,20 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], SpecController.prototype, "invite", null);
+__decorate([
+    Get('app-settings'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SpecController.prototype, "appSettings", null);
+__decorate([
+    Get('clients/:clientId/services/configs'),
+    __param(0, Param('clientId')),
+    __param(1, Req()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], SpecController.prototype, "listClientConfigs", null);
 __decorate([
     Post('register/:short/:token'),
     __param(0, Param('short')),

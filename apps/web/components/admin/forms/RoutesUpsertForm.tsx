@@ -25,7 +25,7 @@ export default function RoutesUpsertForm({ onSaved }: { onSaved?: () => void }) 
     <form method="post" className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end" onSubmit={handleSubmit(async (v) => {
       setServerError(null)
       const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: '/admin/routes', method: 'POST', body: v }) })
-      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'Upsert failed'; setServerError(msg); toastError(msg) } catch { setServerError('Upsert failed'); toastError('Upsert failed') } return }
+      if (!r.ok) { try { const d=await r.json(); const msg = d?.error||d?.message||'We couldn’t save your changes. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t save your changes. Please try again.'; setServerError(m); toastError(m) } return }
       reset({ method: '', path: '', domain: 'node', resource_type: '', action_name: '', resource_param: '' })
       success('Route saved')
       onSaved?.()

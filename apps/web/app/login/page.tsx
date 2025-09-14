@@ -6,8 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { cookies } from 'next/headers'
 import LoginForm from './LoginForm'
 import { getCookieName } from '@/lib/auth'
+import Link from 'next/link'
 
-export default async function LoginPage({ searchParams }: { searchParams?: { next?: string; client_code?: string } }) {
+export default async function LoginPage({ searchParams }: { searchParams?: { next?: string; client_code?: string; msg?: string } }) {
   if (cookies().get(getCookieName())) { redirect(searchParams?.next || '/admin') }
   const csrf = cookies().get('csrf')?.value || ''
   const defaultValues = { client_code: searchParams?.client_code || '', email: '', password: '' }
@@ -19,9 +20,12 @@ export default async function LoginPage({ searchParams }: { searchParams?: { nex
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent>
-          <LoginForm defaultValues={defaultValues} nextPath={searchParams?.next || ''} csrf={csrf} />
+          <LoginForm defaultValues={defaultValues} nextPath={searchParams?.next || ''} csrf={csrf} flash={searchParams?.msg || ''} />
         </CardContent>
-        <CardFooter className="text-sm text-muted-foreground">Enter your client short code, email or username, and password.</CardFooter>
+        <CardFooter className="flex flex-col items-start gap-1 text-sm text-muted-foreground">
+          <span>Enter your client short code, email or username, and password.</span>
+          <Link className="underline" href="/forgot">Forgot your password?</Link>
+        </CardFooter>
       </Card>
     </main>
   )

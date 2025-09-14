@@ -6,12 +6,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-provider'
+import { RSelect, RSelectTrigger, RSelectContent, RSelectItem, RSelectValue, RSelectGroup, RSelectLabel, RSelectSeparator } from '@/components/ui/rselect'
+import SearchableRSelect from '@/components/ui/searchable-rselect'
+import * as React from 'react'
 
 const schema = z.object({ user_id: z.string().min(1, 'User is required'), node_id: z.string().min(1, 'Node is required'), role_id: z.string().min(1, 'Role is required') })
 type Values = z.infer<typeof schema>
 
 export default function AssignmentCreateForm({ onCreated, roleOptions }: { onCreated?: () => void; roleOptions?: Array<{ id: string; name: string }> }) {
-  const { register, handleSubmit, formState: { isSubmitting, errors }, reset } = useForm<Values>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, formState: { isSubmitting, errors }, reset, setValue, watch } = useForm<Values>({ resolver: zodResolver(schema) })
+  const roleValue = watch('role_id')
   const [serverError, setServerError] = useState<string | null>(null)
   const { success, error: toastError } = useToast()
   return (
@@ -22,7 +26,7 @@ export default function AssignmentCreateForm({ onCreated, roleOptions }: { onCre
         body: JSON.stringify({ path: '/admin/assignments', method: 'POST', body: values }),
       })
       if (!r.ok) {
-        try { const data = await r.json(); const msg = data?.error || data?.message || 'Assign role failed'; setServerError(msg); toastError(msg) } catch { setServerError('Assign role failed'); toastError('Assign role failed') }
+        try { const data = await r.json(); const msg = data?.error || data?.message || 'We couldn’t assign the role. Please try again.'; setServerError(msg); toastError(msg) } catch { const m='We couldn’t assign the role. Please try again.'; setServerError(m); toastError(m) }
         return
       }
       reset({ user_id: '', node_id: '', role_id: '' })
@@ -32,12 +36,17 @@ export default function AssignmentCreateForm({ onCreated, roleOptions }: { onCre
       <div><label className="block text-sm text-muted-foreground">User ID</label><Input {...register('user_id')} aria-invalid={!!errors.user_id} /></div>
       <div><label className="block text-sm text-muted-foreground">Node ID</label><Input {...register('node_id')} aria-invalid={!!errors.node_id} /></div>
       <div>
-        <label className="block text-sm text-muted-foreground">Role ID</label>
+        <label className="block text-sm text-muted-foreground">Role</label>
         {roleOptions?.length ? (
-          <select className="border rounded h-9 px-2 w-full" {...register('role_id')} aria-invalid={!!errors.role_id}>
-            <option value="">-- choose --</option>
-            {roleOptions.map(r => (<option key={r.id} value={r.id}>{r.name}</option>))}
-          </select>
+          <>
+            <input type="hidden" {...register('role_id')} />
+            <SearchableRSelect
+              value={roleValue || ''}
+              onValueChange={(v)=>setValue('role_id', v, { shouldValidate: true })}
+              placeholder="-- choose --"
+              items={[{value:'',label:'-- choose --'}, ...roleOptions.map((r:any)=>({ value:r.id, label:r.name, group: `Level ${r.level ?? '—'}` }))]}
+            />
+          </>
         ) : <Input {...register('role_id')} aria-invalid={!!errors.role_id} />}
       </div>
       <Button type="submit" disabled={isSubmitting}>Assign</Button>

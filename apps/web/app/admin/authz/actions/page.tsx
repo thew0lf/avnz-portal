@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import ActionCreateForm from '@/components/admin/forms/ActionCreateForm'
 import { ActionButton } from '@/components/admin/ActionButton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 
 async function createAction(formData: FormData){ 'use server'
   const name = String(formData.get('name')||''); const nodeId = String(formData.get('nodeId')||'')
@@ -21,11 +23,12 @@ async function deleteAction(formData: FormData){ 'use server'
   revalidatePath('/admin/authz/actions')
 }
 
-export default async function AuthzActions({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }){
+export default async function AuthzActions({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc' } }){
   const cookie = cookies().get(getCookieName()); const token = cookie?.value||''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/authz/actions')
-  const nodeId = (session as any)?.orgUUID || ''
+  const orgOverride = cookies().get('orgFilter')?.value || ''
+  const nodeId = orgOverride || (session as any)?.orgUUID || ''
   const q = searchParams?.q || ''
   const limit = Number(searchParams?.limit || '20')
   const offset = Number(searchParams?.offset || '0')
@@ -33,6 +36,14 @@ export default async function AuthzActions({ searchParams }: { searchParams?: { 
   const data = await res.json().catch(()=>({rows:[]})); const rows = data.rows||[]
   const nextOffset = offset + limit
   const prevOffset = Math.max(0, offset - limit)
+  const sort = (searchParams?.sort||'').toLowerCase()
+  const dir = (searchParams?.dir||'asc').toLowerCase()
+  const sorted = [...rows].sort((a:any,b:any)=>{
+    const vA = String(a[sort]||'').toLowerCase(); const vB = String(b[sort]||'').toLowerCase()
+    if (vA < vB) return dir==='asc'? -1: 1
+    if (vA > vB) return dir==='asc'? 1: -1
+    return 0
+  })
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">AuthZ Actions</h1>
@@ -40,15 +51,34 @@ export default async function AuthzActions({ searchParams }: { searchParams?: { 
         <Input name="q" placeholder="Search name" defaultValue={q} className="w-64" />
         <Button type="submit">Search</Button>
       </form>
+      {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
       <ActionCreateForm />
-      <ul className="pl-0">
-        {rows.map((r:any)=>(
-          <li key={r.name} className="flex items-center justify-between border-b py-2">
-            <span>{r.name}</span>
-            <ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/actions/${encodeURIComponent(r.name)}`} />
-          </li>
+      <div className="hidden md:block">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead><a href={`?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&sort=name&dir=${dir==='asc'?'desc':'asc'}`}>Name</a></TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {(sort? sorted : rows).map((r:any)=>(
+            <TableRow key={r.name}>
+              <TableCell>{r.name}</TableCell>
+              <TableCell><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/actions/${encodeURIComponent(r.name)}`} /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      </div>
+      <div className="md:hidden grid gap-2">
+        {(sort? sorted : rows).map((r:any)=>(
+          <div key={r.name} className="rounded border bg-white p-3">
+            <div className="text-sm font-medium flex items-center gap-2"><span>{r.name}</span><Badge variant="secondary">Action</Badge></div>
+            <div className="mt-2"><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/actions/${encodeURIComponent(r.name)}`} /></div>
+          </div>
         ))}
-      </ul>
+      </div>
       <div className="flex justify-between items-center">
         <a className="underline" href={`/admin/authz/actions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
         <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>

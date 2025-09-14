@@ -6,8 +6,38 @@ function parseDate(s?: string, def?: Date) { if (!s) return def || new Date(Date
 
 @Controller("usage")
 export class UsageController {
+  @Get("timeseries")
+  async timeseries(@Req() req: ReqX, @Query("from") from?: string, @Query("to") to?: string, @Query("interval") interval: string = 'day', @Query("projectId") projectId?: string, @Query("projectCode") projectCode?: string, @Query("clientId") clientId?: string, @Query("userId") userId?: string) {
+    const ctx = req.auth; if (!ctx?.orgId) throw new BadRequestException("org required"); if(!Array.isArray((ctx as any).perms) || !((ctx as any).perms as string[]).includes('view_usage')) throw new ForbiddenException('view_usage required');
+    const fromD = parseDate(from, new Date(Date.now()-30*24*3600*1000)); const toD = parseDate(to, new Date());
+    const buckets = new Set(['day','week','month']); const bucket = buckets.has(interval) ? interval : 'day'
+    const args:any[]=[ctx.orgUUID || ctx.orgId, fromD.toISOString(), toD.toISOString()];
+    let where="where org_id=$1 and created_at >= $2 and created_at < $3";
+    const perms = (ctx as any).perms || []
+    // optional user filter
+    if (userId) { args.push(userId); where += ` and user_id=$${args.length}` }
+    let pid: string | null = null
+    if (projectId) { pid = projectId; args.push(projectId); where += ` and project_id=$${args.length}`; }
+    if (!pid && projectCode) {
+      const client0 = await getClientForReq(req as any);
+      try { const r = await client0.query('select p.id from projects p where p.org_id=$1 and p.code=$2', [ctx.orgUUID || ctx.orgId, projectCode]); if (r.rows[0]) { pid = r.rows[0].id; args.push(pid); where += ` and project_id=$${args.length}`; } } finally { client0.release() }
+    }
+    // optional client filter: restrict to projects under client when not admin
+    if (clientId && !perms.includes('admin') && !perms.includes('manage_projects')) {
+      // join projects to confirm client ownership
+      const client2 = await getClientForReq(req as any)
+      try {
+        const ok = await client2.query('select 1 from projects p where p.client_id=$1 limit 1',[clientId])
+        if (!ok.rows[0]) throw new ForbiddenException('client not found')
+      } finally { client2.release() }
+      where += ` and project_id in (select id from projects where client_id='${clientId.replace(/'/g, "''")}')`
+    }
+    const bucketExpr = bucket==='day' ? "date_trunc('day', created_at)" : bucket==='week' ? "date_trunc('week', created_at)" : "date_trunc('month', created_at)";
+    const sql = `select ${bucketExpr} as bucket, sum(input_tokens+output_tokens+embed_tokens) as tokens, sum(cost_usd) as cost_usd, count(*) as requests from usage_events ${where} group by bucket order by bucket asc`;
+    const client = await getClientForReq(req as any); try { const { rows } = await client.query(sql,args); return { rows } } finally { client.release() }
+  }
   @Get("summary")
-  async summary(@Req() req: ReqX, @Query("from") from?: string, @Query("to") to?: string, @Query("by") by="provider,model,operation", @Query("userId") userId?: string, @Query("projectId") projectId?: string, @Query("projectCode") projectCode?: string) {
+  async summary(@Req() req: ReqX, @Query("from") from?: string, @Query("to") to?: string, @Query("by") by="provider,model,operation", @Query("userId") userId?: string, @Query("projectId") projectId?: string, @Query("projectCode") projectCode?: string, @Query("clientId") clientId?: string) {
     const ctx = req.auth; if (!ctx?.orgId) throw new BadRequestException("org required"); if(!Array.isArray((ctx as any).perms) || !((ctx as any).perms as string[]).includes('view_usage')) throw new ForbiddenException('view_usage required');
     const fromD = parseDate(from, new Date(Date.now()-30*24*3600*1000)); const toD = parseDate(to, new Date());
     const cols = by.split(",").map(s=>s.trim()).filter(Boolean).filter(x=>["provider","model","operation"].includes(x));
@@ -36,12 +66,16 @@ export class UsageController {
       } finally { client1.release() }
     }
     // If user is a client-scoped user (no admin/manage_projects) and has a clientId, restrict to their client's projects
-    const clientId = (req.auth as any)?.clientId as string | undefined
+    const clientIdToken = (req.auth as any)?.clientId as string | undefined
     let join = "";
-    if (!perms.includes('admin') && !perms.includes('manage_projects') && clientId) {
-      // Only include events tied to projects belonging to this client
+    if (clientId && !perms.includes('admin') && !perms.includes('manage_projects')) {
       join = " left join projects p on p.id = usage_events.project_id ";
       args.push(clientId);
+      where += ` and p.client_id = $${args.length}`;
+    } else if (!perms.includes('admin') && !perms.includes('manage_projects') && clientIdToken) {
+      // Only include events tied to projects belonging to this client
+      join = " left join projects p on p.id = usage_events.project_id ";
+      args.push(clientIdToken);
       where += ` and p.client_id = $${args.length}`;
     }
     const sql = `select ${groupSql}, sum(input_tokens) as in_tokens, sum(output_tokens) as out_tokens, sum(embed_tokens) as embed_tokens, round(sum(cost_usd)::numeric, 6) as cost_usd from usage_events${join} ${where} group by ${groupSql} order by sum(cost_usd) desc nulls last, ${groupSql} asc limit 1000`;
