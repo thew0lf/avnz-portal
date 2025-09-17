@@ -174,7 +174,6 @@ export default async function TemplatesPage(){
   return (
     <main className="p-6 space-y-6">
       <h1 className="text-xl font-semibold">Templates</h1>
-      {/* @ts-expect-error Async Server Component child */}
       <TemplateForms clients={clients} emailTemplates={emailTemplates} smsTemplates={smsTemplates} />
     </main>
   )
