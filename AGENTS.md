@@ -17,6 +17,7 @@ Key conventions
     - `bash scripts/health-check.sh` (db/redis/api)
     - `bash scripts/smoke-test.sh` (api/web/ai)
     - `bash scripts/walkthrough.sh` (quick read-only portal walkthrough)
+  - Soft-deletes: When implementing any deletion, update `deleted_at` and avoid hard deletes. Ensure list/read queries exclude soft-deleted rows.
 - Security & compliance
   - Client/Wizard forms: always use `method="post"`; avoid querystring submissions.
   - Forgot password is non‑enumerating and redirects back to login with a neutral toast.
