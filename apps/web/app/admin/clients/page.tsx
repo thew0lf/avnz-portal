@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn } from '@/components/ui/data-table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ClientCreateForm from '@/components/admin/forms/ClientCreateForm'
 import { revalidatePath } from 'next/cache'
@@ -25,6 +25,14 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
   const rows = data.rows || []
   const nextOffset = offset + limit
   const prevOffset = Math.max(0, offset - limit)
+  const columns: CommonColumn<any>[] = [
+    makeDragColumn(),
+    { accessorKey: 'code', header: 'Code', cell: ({ row }) => row.original.code },
+    { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name },
+    { accessorKey: 'manager_email', header: 'Manager', cell: ({ row }) => row.original.manager_email || '-' },
+    { accessorKey: 'created_at', header: 'Created', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone: 'UTC' }) },
+    makeActionsColumn({ viewHref: (r:any)=>'/admin/clients/manage' }),
+  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Clients</h1></div>
@@ -47,29 +55,7 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All clients</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-          <TableHeader>
-            <tr><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Manager</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></tr>
-          </TableHeader>
-          <TableBody>
-            {rows.map((r:any)=>(
-              <TableRow key={r.id}>
-                <TableCell>{r.code}</TableCell>
-                <TableCell>{r.name}</TableCell>
-                <TableCell>{r.manager_email||'-'}</TableCell>
-                <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
-                <TableCell><a className="underline" href="/admin/clients/manage">Manage</a></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-            </Table>
-            <div className="flex justify-between items-center mt-3 px-4 pb-4">
-              <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
-              <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
-              <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
-            </div>
-          </div>
+          <DataTable data={rows} columns={columns} enableDnD />
         </CardContent>
       </Card>
     </main>
