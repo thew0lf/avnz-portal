@@ -7,6 +7,10 @@ Key conventions
   - Docker is the local orchestrator. Agents may run `docker compose` commands (build, up, down, logs, exec) when needed to build, reset, or verify services.
   - Prefer containerized workflows; do not assume host Node/Python are installed.
   - When destructive (`down -v`, pruning), prompt or clearly communicate intent.
+  - Before pushing, run local checks:
+    - `bash scripts/health-check.sh` (db/redis/api)
+    - `bash scripts/smoke-test.sh` (api/web/ai)
+    - `bash scripts/walkthrough.sh` (quick read-only portal walkthrough)
 - Security & compliance
   - Client/Wizard forms: always use `method="post"`; avoid querystring submissions.
   - Forgot password is non‑enumerating and redirects back to login with a neutral toast.
