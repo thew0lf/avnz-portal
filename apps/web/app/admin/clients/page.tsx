@@ -29,7 +29,7 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
       <h1 className="text-xl font-semibold">Clients</h1>
       <ClientCreateForm />
       <form action="/admin/clients" className="flex gap-2 items-end">
-        <Input name="q" placeholder="Search clients" defaultValue={q} className="w-64" />
+        <Input name="q" placeholder="Search clients" defaultValue={q} className="w-full md:w-64" />
         <Button type="submit">Search</Button>
       </form>
       {q && (<div className="mt-2"><Badge variant="secondary">Search: {q}</Badge></div>)}

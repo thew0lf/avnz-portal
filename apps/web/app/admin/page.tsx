@@ -4,6 +4,8 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import Link from 'next/link'
 import { DashboardUsageChart, DashboardMetrics } from './DashboardUsage'
+import OutboxStats from './OutboxStats'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 export default async function AdminHome() {
   const cookie = cookies().get(getCookieName())
@@ -27,35 +29,49 @@ export default async function AdminHome() {
       </div>
 
       {showFirstClientCta && (
-        <div className="p-4 border rounded-md bg-white">
-          <div className="font-medium">Create your first client</div>
-          <p className="text-sm text-muted-foreground mt-1">
-            You don’t have any clients yet. Create a client to organize projects and manage access.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Link href="/admin/clients" className="inline-flex items-center px-3 py-1.5 rounded bg-black text-white text-sm">Create client</Link>
-            <Link href="/admin/projects" className="inline-flex items-center px-3 py-1.5 rounded border text-sm">Skip for now</Link>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="font-medium">Create your first client</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              You don’t have any clients yet. Create a client to organize projects and manage access.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Link href="/admin/clients" className="inline-flex items-center px-3 py-1.5 rounded bg-black text-white text-sm">Create client</Link>
+              <Link href="/admin/projects" className="inline-flex items-center px-3 py-1.5 rounded border text-sm">Skip for now</Link>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 p-4 border rounded-md bg-white min-h-[280px]">
-          <DashboardUsageChart />
-        </div>
+        <Card className="lg:col-span-2">
+          <CardHeader className="px-4 py-3">
+            <CardTitle className="text-base">Usage overview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 min-h-[280px]">
+            <DashboardUsageChart />
+          </CardContent>
+        </Card>
         <div className="space-y-4">
-          <div className="p-4 border rounded-md bg-white">
-            <div className="font-medium">Quick links</div>
-            <ul className="mt-2 text-sm space-y-1">
-              <li><Link className="underline" href="/admin/clients">Manage clients</Link></li>
-              <li><Link className="underline" href="/admin/members">Invite members</Link></li>
-              <li><Link className="underline" href="/admin/pricing">Set pricing rules</Link></li>
-              <li><Link className="underline" href="/admin/templates">Message templates</Link></li>
-            </ul>
-          </div>
-          <div className="p-4 border rounded-md bg-white">
-            <DashboardMetrics />
-          </div>
+          <Card>
+            <CardHeader className="px-4 py-3"><CardTitle className="text-base">Quick links</CardTitle></CardHeader>
+            <CardContent className="p-4 pt-0">
+              <ul className="mt-2 text-sm space-y-1">
+                <li><Link className="underline" href="/admin/clients">Manage clients</Link></li>
+                <li><Link className="underline" href="/admin/members">Invite members</Link></li>
+                <li><Link className="underline" href="/admin/pricing">Set pricing rules</Link></li>
+                <li><Link className="underline" href="/admin/templates">Message templates</Link></li>
+                <li><Link className="underline" href="/admin/outbox">Outbox</Link></li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="px-4 py-3"><CardTitle className="text-base">Key metrics</CardTitle></CardHeader>
+            <CardContent className="p-4 pt-0">
+              <DashboardMetrics />
+            </CardContent>
+          </Card>
+          <OutboxStats />
         </div>
       </div>
     </div>

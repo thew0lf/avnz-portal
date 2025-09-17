@@ -48,7 +48,7 @@ export default async function AuthzActions({ searchParams }: { searchParams?: { 
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">AuthZ Actions</h1>
       <form action="/admin/authz/actions" className="flex gap-2 items-end">
-        <Input name="q" placeholder="Search name" defaultValue={q} className="w-64" />
+        <Input name="q" placeholder="Search name" defaultValue={q} className="w-full md:w-64" />
         <Button type="submit">Search</Button>
       </form>
       {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
@@ -74,7 +74,7 @@ export default async function AuthzActions({ searchParams }: { searchParams?: { 
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((r:any)=>(
           <div key={r.name} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium flex items-center gap-2"><span>{r.name}</span><Badge variant="secondary">Action</Badge></div>
+            <div className="text-sm font-medium flex items-center gap-2 break-words"><span>{r.name}</span><Badge variant="secondary">Action</Badge></div>
             <div className="mt-2"><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/actions/${encodeURIComponent(r.name)}`} /></div>
           </div>
         ))}

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: ai }
+  template:
+    metadata:
+      labels: { app: ai }
+    spec:
+      containers:
+        - name: ai
+          image: ai
+          ports: [{ containerPort: 8000 }]
+          env:
+            - name: AUTH_SECRET
+              valueFrom: { secretKeyRef: { name: app-secrets, key: AUTH_SECRET } }
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }

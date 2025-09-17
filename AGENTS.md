@@ -3,6 +3,12 @@
 This repository uses `SUMMARY.MD` as the authoritative, always‑up‑to‑date project brief. Before making changes, READ `SUMMARY.MD` end‑to‑end to understand the architecture, conventions, and recent changes. After making any substantive change, append a concise update to `SUMMARY.MD` (files touched, endpoints, migrations, secrets/env expectations, and access notes).
 
 Key conventions
+- Modes
+  - Brave Mode: When explicitly requested by the user, proceed without prompting for confirmations. Assume consent for safe, expected actions and choose the best course per this guide. Continue to:
+    - Log actions succinctly via commits and PR notes.
+    - Use pre‑push checks (health, smoke, walkthrough).
+    - Request escalated permissions for shell commands as needed with clear justification.
+  - Default Mode: Ask before potentially destructive actions (volume prune, data wipes, force pushes).
 - Tooling & runtime
   - Docker is the local orchestrator. Agents may run `docker compose` commands (build, up, down, logs, exec) when needed to build, reset, or verify services.
   - Prefer containerized workflows; do not assume host Node/Python are installed.

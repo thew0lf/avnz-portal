@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns-internal
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: external-dns
+    targetRevision: 6.28.8
+    helm:
+      values: |
+        provider: aws
+        policy: upsert-only
+        aws:
+          zoneType: private
+        sources:
+          - service
+          - ingress
+        txtOwnerId: avnz-portal-internal
+        domainFilters:
+          - REPLACE_PRIVATE_DOMAIN
+        serviceAccount:
+          create: true
+          name: external-dns
+          annotations:
+            eks.amazonaws.com/role-arn: REPLACE_DNS_IRSA_ROLE_ARN
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+

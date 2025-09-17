@@ -62,7 +62,7 @@ export default async function AuthzNodes({ searchParams }: { searchParams?: { so
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((n:any)=>(
           <div key={n.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium">{n.name}</div>
+            <div className="text-sm font-medium break-words">{n.name}</div>
             <div className="text-xs text-muted-foreground">{n.type} · {n.slug}</div>
             <div className="text-xs text-muted-foreground break-words">{n.path}</div>
           </div>

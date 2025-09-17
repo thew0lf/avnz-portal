@@ -20,6 +20,9 @@ import { OrgsController } from "./orgs.controller.js";
 import { CheckController } from "./authzcheck/check.controller.js";
 import { NodesController } from "./nodes.controller.js";
 import { AdminController } from "./admin.controller.js";
+import { HealthController } from "./health.controller.js";
+import { MeController } from "./me.controller.js";
+import { OutboxController } from "./outbox.controller.js";
 import { SpecController } from "./spec.controller.js";
 import { SpecAuthController } from "./spec-auth.controller.js";
 import { AuthzService } from "./authz/authz.service.js";
@@ -34,7 +37,7 @@ let AppModule = class AppModule {
     configure(c) { c.apply(securityHeadersMiddleware, rateLimitMiddleware, authMiddleware, routeGuardMiddleware).forRoutes("*"); }
 };
 AppModule = __decorate([
-    Module({ controllers: [UsageController, ComplianceController, PricingController, AuthController, OrgsController, ClientsController, ProjectsController, MembershipsController, RolesController, ProjectMembersController, CheckController, NodesController, AdminController, SpecController, SpecAuthController], providers: [AuthzService] })
+    Module({ controllers: [HealthController, MeController, UsageController, ComplianceController, PricingController, AuthController, OrgsController, ClientsController, ProjectsController, MembershipsController, RolesController, ProjectMembersController, CheckController, NodesController, AdminController, OutboxController, SpecController, SpecAuthController], providers: [AuthzService] })
 ], AppModule);
 async function bootstrap() { const app = await NestFactory.create(AppModule, { cors: true }); const port = Number(process.env.PORT || 3001); await migrate(); startRbacNotifyListener(); startAuditHousekeeping(); await app.listen(port); console.log("API listening on", port); }
 bootstrap();

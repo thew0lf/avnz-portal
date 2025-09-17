@@ -67,8 +67,8 @@ export default async function AssignmentsPage({ searchParams }: { searchParams?:
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((r:any)=>(
           <div key={r.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium">User: {r.user_id}</div>
-            <div className="text-xs text-muted-foreground">Node: {r.node_id} · Role: {r.role_id}</div>
+            <div className="text-sm font-medium break-words">User: {r.user_id}</div>
+            <div className="text-xs text-muted-foreground break-words">Node: {r.node_id} · Role: {r.role_id}</div>
             <div className="mt-2"><ActionButton label="Revoke" variant="secondary" method="DELETE" path={`/admin/assignments/${encodeURIComponent(r.id)}`} /></div>
           </div>
         ))}

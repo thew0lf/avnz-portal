@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+      API_IMAGE: ${{ secrets.ECR_REGISTRY }}/${{ secrets.PROJECT_NAME }}-api:latest
+      WEB_IMAGE: ${{ secrets.ECR_REGISTRY }}/${{ secrets.PROJECT_NAME }}-web:latest
+      AI_IMAGE:  ${{ secrets.ECR_REGISTRY }}/${{ secrets.PROJECT_NAME }}-ai:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push API
+        run: |
+          docker build -t $API_IMAGE apps/api
+          docker push $API_IMAGE
+      - name: Build & push WEB
+        run: |
+          docker build -t $WEB_IMAGE apps/web
+          docker push $WEB_IMAGE
+      - name: Build & push AI
+        run: |
+          docker build -t $AI_IMAGE apps/ai
+          docker push $AI_IMAGE
+
+      # Kustomize overlays removed; GitOps now updates Helm values only
+
+      - name: Prepare Helm values (prod)
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          SHORT=$(echo $GIT_SHA | cut -c1-12)
+          sed -i "s#REPLACE_ECR#${ECR_REGISTRY}#g" charts/avnz-portal/values-prod.yaml
+          sed -i "s#REPLACE_PROJECT#${{ secrets.PROJECT_NAME }}#g" charts/avnz-portal/values-prod.yaml
+          sed -i "s#REPLACE_TAG#${SHORT}#g" charts/avnz-portal/values-prod.yaml
+
+      - name: Prepare Helm values (staging)
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          SHORT=$(echo $GIT_SHA | cut -c1-12)
+          sed -i "s#REPLACE_ECR#${ECR_REGISTRY}#g" charts/avnz-portal/values-staging.yaml
+          sed -i "s#REPLACE_PROJECT#${{ secrets.PROJECT_NAME }}#g" charts/avnz-portal/values-staging.yaml
+          sed -i "s#REPLACE_STAGING_TAG#${SHORT}#g" charts/avnz-portal/values-staging.yaml
+
+      - name: Commit Helm values
+        run: |
+          git add charts/avnz-portal/values-prod.yaml charts/avnz-portal/values-staging.yaml
+          git commit -m "chore(gitops-helm): update images (prod+staging) to ${GITHUB_SHA}" || echo "No changes"
+          git push origin HEAD:${GITHUB_REF_NAME}

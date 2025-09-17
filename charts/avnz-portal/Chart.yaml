@@ -1,0 +1,7 @@
+apiVersion: v2
+name: avnz-portal
+description: Helm chart for Avnz Portal (web, api, ai)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
