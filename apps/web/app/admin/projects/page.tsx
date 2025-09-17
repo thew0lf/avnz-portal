@@ -4,7 +4,7 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn } from '@/components/ui/data-table'
+import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn, makeSelectionColumn } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ProjectCreateForm from '@/components/admin/forms/ProjectCreateForm'
@@ -25,6 +25,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams?: { 
   const nextOffset = offset + limit
   const prevOffset = Math.max(0, offset - limit)
   const columns: CommonColumn<any>[] = [
+    makeSelectionColumn(),
     makeDragColumn(),
     { accessorKey: 'code', header: 'Code', cell: ({ row }) => row.original.code || '' },
     { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name },

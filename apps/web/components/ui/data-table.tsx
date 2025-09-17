@@ -8,6 +8,7 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
+  VisibilityState,
 } from '@tanstack/react-table'
 import {
   DndContext,
@@ -23,7 +24,7 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { GripVertical, MoreVertical, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
@@ -70,12 +71,14 @@ export function DataTable<TData>({
   const [data, setData] = React.useState(() => initial)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [pageSize, setPageSize] = React.useState(rowsPerPageOptions[0] || 10)
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, pagination: { pageIndex: 0, pageSize } },
+    state: { sorting, pagination: { pageIndex: 0, pageSize }, columnVisibility },
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -97,6 +100,24 @@ export function DataTable<TData>({
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-end gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">Columns</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {table.getAllLeafColumns().filter(c => c.getCanHide()).map(col => (
+              <DropdownMenuCheckboxItem
+                key={col.id}
+                checked={col.getIsVisible()}
+                onCheckedChange={(v) => col.toggleVisibility(!!v)}
+              >
+                {col.id}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <div className="overflow-x-auto">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
@@ -187,4 +208,3 @@ export function makeActionsColumn<TData>({ onEdit, onDelete, viewHref }: { onEdi
     ),
   }
 }
-
