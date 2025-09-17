@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DataTable, CommonColumn } from '@/components/ui/data-table'
 import Link from 'next/link'
 import { ActionButton } from '@/components/admin/ActionButton'
 
@@ -17,6 +17,15 @@ export default async function OutboxPage({ searchParams }: { searchParams?: { [k
   const res = await apiFetch(`/admin/outbox?nodeId=${encodeURIComponent(nodeId)}&status=${encodeURIComponent(status)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
   const data = await res.json().catch(()=>({ rows: [] }))
   const rows = data.rows || []
+  const columns: CommonColumn<any>[] = [
+    { accessorKey: 'created_at', header: 'Created', cell: ({ row }) => new Date(row.original.created_at).toLocaleString() },
+    { accessorKey: 'to_email', header: 'To', cell: ({ row }) => row.original.to_email },
+    { accessorKey: 'type', header: 'Type', cell: ({ row }) => row.original.type },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => row.original.status },
+    { accessorKey: 'attempts', header: 'Attempts', cell: ({ row }) => row.original.attempts },
+    { accessorKey: 'last_error', header: 'Error', cell: ({ row }) => (row.original.last_error||'').slice(0,60) },
+    { id: 'action', header: 'Action', cell: ({ row }) => (row.original.status !== 'sent') ? (<ActionButton label="Retry" path={`/admin/outbox/${encodeURIComponent(row.original.id)}/retry`} method="POST" />) : null },
+  ]
   return (
     <main className="p-4">
       <Card>
@@ -37,39 +46,9 @@ export default async function OutboxPage({ searchParams }: { searchParams?: { [k
               <button className="border rounded px-3 py-1" type="submit">Filter</button>
             </form>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Created</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Attempts</TableHead>
-                <TableHead>Error</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r:any)=> (
-                <TableRow key={r.id}>
-                  <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
-                  <TableCell>{r.to_email}</TableCell>
-                  <TableCell>{r.type}</TableCell>
-                  <TableCell>{r.status}</TableCell>
-                  <TableCell>{r.attempts}</TableCell>
-                  <TableCell title={r.last_error || ''}>{(r.last_error || '').slice(0,60)}</TableCell>
-                  <TableCell>
-                    {(r.status !== 'sent') && (
-                      <ActionButton label="Retry" path={`/admin/outbox/${encodeURIComponent(r.id)}/retry`} method="POST" />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable data={rows} columns={columns} />
         </CardContent>
       </Card>
     </main>
   )
 }
-

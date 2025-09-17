@@ -4,6 +4,7 @@ import { useLocalStorage } from '../useLocalStorage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { DataTable, CommonColumn } from '@/components/ui/data-table'
 export default function Compliance(){
   const [apiBase] = useLocalStorage<string>('apiBase', process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001');
   const [orgId] = useLocalStorage<string>('orgId','');
@@ -12,6 +13,13 @@ export default function Compliance(){
   const [series,setSeries] = useState<any[]>([]);
   async function load(){ const res = await fetch(`${apiBase}/compliance/redactions?nodeType=${encodeURIComponent(nodeType)}&nodeId=${encodeURIComponent(nodeId)}`, { headers: { 'x-org-id': orgId, 'x-roles': roles } }); const data = await res.json(); setSeries(data.series||[]); }
   function csv(){ window.location.href = `${apiBase}/compliance/redactions/export.csv?nodeType=${encodeURIComponent(nodeType)}&nodeId=${encodeURIComponent(nodeId)}`; }
+  const columns: CommonColumn<any>[] = [
+    { accessorKey: 'day', header: 'Day', cell: ({ row }) => String(row.original.day).slice(0,10) },
+    { accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email || 0 },
+    { accessorKey: 'phone', header: 'Phone', cell: ({ row }) => row.original.phone || 0 },
+    { accessorKey: 'ssn', header: 'SSN', cell: ({ row }) => row.original.ssn || 0 },
+    { accessorKey: 'cc', header: 'CC', cell: ({ row }) => row.original.cc || 0 },
+  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Compliance & Redactions</h1></div>
@@ -28,12 +36,7 @@ export default function Compliance(){
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">Results</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className='overflow-auto'>
-            <table className='w-full text-sm'>
-              <thead><tr className='text-left'><th>Day</th><th>Email</th><th>Phone</th><th>SSN</th><th>CC</th></tr></thead>
-              <tbody>{series.map((r,i)=>(<tr key={i} className='border-t'><td>{String(r.day).slice(0,10)}</td><td>{r.email||0}</td><td>{r.phone||0}</td><td>{r.ssn||0}</td><td>{r.cc||0}</td></tr>))}</tbody>
-            </table>
-          </div>
+          <DataTable data={series} columns={columns} />
         </CardContent>
       </Card>
     </main>
