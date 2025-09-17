@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import { DataTable, CommonColumn } from '@/components/ui/data-table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import PricingRuleForm from '@/components/admin/forms/PricingRuleForm'
 
@@ -25,6 +25,17 @@ export default async function PricingPage() {
   }
   const data = await res.json()
   const rows: any[] = data.rows || []
+  const columns: CommonColumn<any>[] = [
+    { accessorKey: 'scope', header: 'Scope', cell: ({ row }) => row.original.scope },
+    { accessorKey: 'org_id', header: 'Org', cell: ({ row }) => row.original.org_id || '' },
+    { accessorKey: 'role', header: 'Role', cell: ({ row }) => row.original.role || '' },
+    { accessorKey: 'user_id', header: 'User', cell: ({ row }) => row.original.user_id || '' },
+    { accessorKey: 'provider', header: 'Provider', cell: ({ row }) => row.original.provider },
+    { accessorKey: 'model', header: 'Model', cell: ({ row }) => row.original.model },
+    { accessorKey: 'metric', header: 'Metric', cell: ({ row }) => row.original.metric },
+    { accessorKey: 'price_per_1k', header: '$/1k', cell: ({ row }) => Number(row.original.price_per_1k).toFixed(3) },
+    { accessorKey: 'active', header: 'Active', cell: ({ row }) => String(row.original.active) },
+  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Pricing Rules</h1></div>
@@ -38,38 +49,7 @@ export default async function PricingPage() {
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All rules</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-          <TableHeader>
-            <tr>
-              <TableHead>Scope</TableHead>
-              <TableHead>Org</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Model</TableHead>
-              <TableHead>Metric</TableHead>
-              <TableHead>$/1k</TableHead>
-              <TableHead>Active</TableHead>
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {rows.map((r, i) => (
-              <TableRow key={i}>
-                <TableCell>{r.scope}</TableCell>
-                <TableCell>{r.org_id || ''}</TableCell>
-                <TableCell>{r.role || ''}</TableCell>
-                <TableCell>{r.user_id || ''}</TableCell>
-                <TableCell>{r.provider}</TableCell>
-                <TableCell>{r.model}</TableCell>
-                <TableCell>{r.metric}</TableCell>
-                <TableCell>{Number(r.price_per_1k).toFixed(3)}</TableCell>
-                <TableCell>{String(r.active)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-            </Table>
-          </div>
+          <DataTable data={rows} columns={columns} />
         </CardContent>
       </Card>
     </main>

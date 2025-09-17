@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import { DataTable, CommonColumn } from '@/components/ui/data-table'
 import MembersAddForm from '@/components/admin/forms/MembersAddForm'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import SetMemberRoleForm from '@/components/admin/forms/SetMemberRoleForm'
@@ -22,6 +22,13 @@ export default async function MembersPage() {
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
   const roles = (await rolesRes.json()).rows || []
+  const columns: CommonColumn<any>[] = [
+    { accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email },
+    { accessorKey: 'username', header: 'Username', cell: ({ row }) => row.original.username || '' },
+    { accessorKey: 'role', header: 'Role', cell: ({ row }) => row.original.role },
+    { accessorKey: 'created_at', header: 'Since', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone:'UTC' }) },
+    { id: 'set_role', header: 'Set Role', cell: ({ row }) => (<SetMemberRoleForm identifier={row.original.email} roles={roles} />) },
+  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Members</h1></div>
@@ -33,27 +40,8 @@ export default async function MembersPage() {
       </Card>
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All members</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-          <TableHeader>
-            <tr><TableHead>Email</TableHead><TableHead>Username</TableHead><TableHead>Role</TableHead><TableHead>Since</TableHead><TableHead>Set Role</TableHead></tr>
-          </TableHeader>
-          <TableBody>
-            {rows.map((r:any)=>(
-              <TableRow key={r.user_id}>
-                <TableCell>{r.email}</TableCell>
-                <TableCell>{r.username||''}</TableCell>
-                <TableCell>{r.role}</TableCell>
-                <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
-                <TableCell>
-                  <SetMemberRoleForm identifier={r.email} roles={roles} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-            </Table>
-          </div>
+        <CardContent className="p-4 pt-0">
+          <DataTable data={rows} columns={columns} />
         </CardContent>
       </Card>
     </main>
