@@ -37,6 +37,7 @@ open http://localhost:3000/admin/pricing
 - Internet access to pull base images on first run.
 - Many commands and scripts in this repo invoke Docker (build/up/down/logs). Ensure Docker is started; we will run Docker commands when needed.
 - Deletion policy: All deletes are soft-deletes. APIs should set `deleted_at` and readers must filter on `deleted_at IS NULL`.
+- Build & checks: During updates, the agent may proactively rebuild Docker services and run health/smoke/walkthrough checks to validate changes.
 
 ## Pre‑push Requirements
 - You must run and pass all checks locally before pushing:
