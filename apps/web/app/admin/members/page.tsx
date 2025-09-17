@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import MembersAddForm from '@/components/admin/forms/MembersAddForm'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import SetMemberRoleForm from '@/components/admin/forms/SetMemberRoleForm'
 import { revalidatePath } from 'next/cache'
 
@@ -23,10 +24,18 @@ export default async function MembersPage() {
   const roles = (await rolesRes.json()).rows || []
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Members</h1>
-      <MembersAddForm roles={roles} />
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Members</h1></div>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Invite or add member</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <MembersAddForm roles={roles} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">All members</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
           <TableHeader>
             <tr><TableHead>Email</TableHead><TableHead>Username</TableHead><TableHead>Role</TableHead><TableHead>Since</TableHead><TableHead>Set Role</TableHead></tr>
           </TableHeader>
@@ -43,8 +52,10 @@ export default async function MembersPage() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
-      </div>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   )
 }

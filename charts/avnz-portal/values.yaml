@@ -1,0 +1,78 @@
+namespace: avnz
+domain: "portal.example.com"
+acmArn: "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+exposure:
+  # ingress = ALB Ingress Controller (path-based routing supported)
+  # nlb-web = AWS NLB Service exposing only web (no path-based routing)
+  type: ingress
+
+ingress:
+  scheme: internet-facing # or "internal"
+
+externalDNS:
+  enabled: false
+  hostname: "portal.example.com"
+
+web:
+  replicas: 2
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-web
+    tag: latest
+  env:
+    NEXT_PUBLIC_API_BASE: "https://portal.example.com"
+    API_BASE: "http://api:3001"
+
+api:
+  replicas: 2
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-api
+    tag: latest
+  env:
+    REDIS_URL: "redis://redis:6379"
+    # Optional: SQS publishing (API will still write DB outbox)
+    SQS_QUEUE_URL: ""
+    SQS_DLQ_URL: ""
+    AWS_REGION: "us-east-1"
+  secretRef: app-secrets
+
+ai:
+  replicas: 1
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-ai
+    tag: latest
+  secretRef: app-secrets
+
+externalSecrets:
+  enabled: false
+  # Name of ClusterSecretStore pre-configured by cluster ops (e.g., points to AWS SSM or Secrets Manager via IRSA)
+  clusterSecretStoreName: aws-ssm
+  # Kind: ClusterSecretStore or SecretStore
+  storeKind: ClusterSecretStore
+  # Define keys to sync into the app-secrets Secret
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: /avnzr/db/url
+    - secretKey: AUTH_SECRET
+      remoteRef:
+        key: /avnzr/auth/secret
+    - secretKey: APP_AES_KEY
+      remoteRef:
+        key: /avnzr/app/aes_key
+
+# Optional mailer worker (SQS consumer). Requires KEDA and IRSA.
+mailer:
+  enabled: false
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-api
+    tag: latest
+  env:
+    SQS_QUEUE_URL: ""
+    AWS_REGION: "us-east-1"
+  secretRef: app-secrets
+  keda:
+    enabled: true
+    minReplicaCount: 0
+    maxReplicaCount: 10
+    queueLength: 50

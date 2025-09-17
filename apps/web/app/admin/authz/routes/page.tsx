@@ -71,7 +71,7 @@ export default async function AuthzRoutes({ searchParams }: { searchParams?: { q
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((r:any)=>(
           <div key={r.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium mb-1">{r.method} {r.path}</div>
+            <div className="text-sm font-medium mb-1 break-all">{r.method} {r.path}</div>
             <div className="text-xs text-muted-foreground">{r.domain}.{r.resource_type}.{r.action_name} · param: {r.resource_param||'-'}</div>
             <div className="mt-2">
               <RouteRowEditor row={r} />

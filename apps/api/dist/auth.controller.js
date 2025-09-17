@@ -14,6 +14,8 @@ import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { pool } from './db.js';
 import { signToken, verifyPassword, randomToken, sha256hex, hashPassword } from './auth.util.js';
 import { validatePassword } from './security.js';
+// Password reset now enqueues an outbox email and, when configured, publishes to SQS; worker delivers asynchronously
+import { publishEmailJob } from './queue.js';
 let AuthController = class AuthController {
     async mfaSetup(body) {
         const { user_id } = body || {};
@@ -225,7 +227,17 @@ let AuthController = class AuthController {
             throw new BadRequestException('client_code and email/identifier required');
         const client = await pool.connect();
         try {
-            const u = await client.query('select id from users where org_id=$1 and (email=$2 or lower(username)=lower($3))', [client_code, String(ident).toLowerCase(), ident]);
+            // Resolve org and client by client_code
+            const cRes = await client.query('select id as client_id, org_id, name from clients where code=$1', [client_code]);
+            const cRow = cRes.rows[0];
+            if (!cRow)
+                return { ok: true }; // do not leak
+            // Find user by email or username within org via memberships
+            const u = await client.query(`select u.id, u.email
+           from users u
+           join memberships m on m.user_id=u.id
+          where m.org_id=$1 and (lower(u.email)=lower($2) or lower(u.username)=lower($3))
+          limit 1`, [cRow.org_id, String(ident), String(ident)]);
             const user = u.rows[0];
             if (!user)
                 return { ok: true }; // do not leak
@@ -233,8 +245,34 @@ let AuthController = class AuthController {
             const hash = sha256hex(token);
             const exp = new Date(Date.now() + 60 * 60 * 1000);
             await client.query('insert into password_resets(user_id, token_hash, expires_at) values ($1,$2,$3)', [user.id, hash, exp.toISOString()]);
-            // For dev, return token. In prod, send email instead.
-            return { ok: true, reset_token: token, expires: exp.toISOString() };
+            // Enqueue outbox email for asynchronous delivery by worker
+            const idempotencyKey = `password_reset:${user.id}:${hash}`;
+            try {
+                await client.query(`insert into outbox_emails(type, org_id, client_id, to_email, template_key, vars, idempotency_key)
+           values ($1,$2,$3,$4,$5,$6,$7)
+           on conflict (idempotency_key) do nothing`, ['email.password_reset', cRow.org_id, cRow.client_id, String(user.email), 'password_reset', JSON.stringify({ token, expires: exp.toISOString() }), idempotencyKey]);
+            }
+            catch (e) {
+                console.warn('Failed to enqueue password reset email:', e);
+            }
+            // Publish to SQS if configured (best-effort)
+            try {
+                await publishEmailJob({
+                    type: 'email.password_reset',
+                    orgId: String(cRow.org_id),
+                    clientId: String(cRow.client_id),
+                    to: String(user.email),
+                    template: 'password_reset',
+                    vars: { token, expires: exp.toISOString() },
+                    idempotencyKey,
+                }, { idempotencyKey });
+            }
+            catch (e) {
+                console.warn('SQS publish failed (will rely on DB outbox):', e);
+            }
+            // For non-production or local dev, include token to facilitate manual testing
+            const includeToken = (process.env.NODE_ENV || 'development') !== 'production';
+            return includeToken ? { ok: true, reset_token: token, expires: exp.toISOString() } : { ok: true };
         }
         finally {
             client.release();

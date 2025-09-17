@@ -1,4 +1,14 @@
 services:
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      - SERVICES=apigateway,cloudformation,cloudwatch,dynamodb,ec2,ecs,ecr,elasticache,elbv2,iam,kms,lambda,rds,route53,s3,secretsmanager,ses,sns,sqs,ssm,sts
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=${AWS_REGION:-us-east-1}
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
   db:
     image: pgvector/pgvector:pg16
     environment:
@@ -8,19 +18,46 @@ services:
     ports: ["5432:5432"]
     volumes:
       - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-avnzr_portal} || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   api:
     build: ./apps/api
-    depends_on: [db]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/avnzr_portal}
       PGSSL: ${PGSSL:-}
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     ports: ["3001:3001"]
     volumes:
       - ./apps/api:/app
       - ./db/init:/db/init
     command: sh -c "npm ci || npm i && npm run build && node dist/migrate.js && node dist/main.js"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   ai:
     build: ./apps/ai
@@ -39,7 +76,9 @@ services:
 
   web:
     build: ./apps/web
-    depends_on: [api]
+    depends_on:
+      api:
+        condition: service_healthy
     environment:
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://api:3001}
       NEXT_PUBLIC_AI_BASE: ${NEXT_PUBLIC_AI_BASE:-http://ai:8000}
@@ -48,6 +87,7 @@ services:
       NEXT_TELEMETRY_DISABLED: "1"
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
       DEMO_USERS: ${DEMO_USERS:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     ports: ["3000:3000"]
     volumes:
       - ./apps/web:/app
@@ -56,3 +96,5 @@ services:
 
 volumes:
   dbdata:
+  redisdata:
+  localstack-data:

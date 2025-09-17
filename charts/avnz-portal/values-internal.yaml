@@ -1,0 +1,51 @@
+namespace: avnz-internal
+domain: "internal.example.local" # used if you enable externalDNS for private zones
+acmArn: "" # not required for NLB exposure
+
+exposure:
+  type: nlb-web
+
+externalDNS:
+  enabled: true
+  hostname: "portal.internal.example.local"
+
+web:
+  replicas: 2
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-web
+    tag: REPLACE_INTERNAL_TAG
+  env:
+    NEXT_PUBLIC_API_BASE: "http://web-nlb" # or an internal DNS name
+    API_BASE: "http://api:3001"
+
+api:
+  replicas: 2
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-api
+    tag: REPLACE_INTERNAL_TAG
+  env:
+    REDIS_URL: "redis://redis:6379"
+  secretRef: app-secrets
+
+ai:
+  replicas: 1
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-ai
+    tag: REPLACE_INTERNAL_TAG
+  secretRef: app-secrets
+
+externalSecrets:
+  enabled: false
+  clusterSecretStoreName: aws-ssm
+  storeKind: ClusterSecretStore
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: /avnzr-internal/db/url
+    - secretKey: AUTH_SECRET
+      remoteRef:
+        key: /avnzr-internal/auth/secret
+    - secretKey: APP_AES_KEY
+      remoteRef:
+        key: /avnzr-internal/app/aes_key
+

@@ -44,6 +44,16 @@ let OrgsController = class OrgsController {
             // Note: users.org_id is a legacy TEXT column; set to org.code for compatibility
             const u = await client.query('insert into users(org_id,email,username,password_hash) values ($1,$2,$3,$4) returning id, email, username', [String(org.code), String(email).toLowerCase(), username || null, pw]);
             const user = u.rows[0];
+            // Create default client/company under this org (code mirrors org.code)
+            let clientId = null;
+            try {
+                const cIns = await client.query('insert into clients(org_id, code, name) values ($1,$2,$3) returning id', [org.id, org.code, org.name]);
+                clientId = cIns.rows[0]?.id || null;
+            }
+            catch {
+                const cSel = await client.query('select id from clients where org_id=$1 and code=$2', [org.id, org.code]);
+                clientId = cSel.rows[0]?.id || null;
+            }
             // Create org-level role 'org' (client_id is null), tolerate duplicates
             let roleId = null;
             const roleIns = await client.query('insert into roles(org_id, client_id, name, description) values ($1,$2,$3,$4) on conflict do nothing returning id', [org.id, null, 'org', 'Organization manager']);
@@ -58,8 +68,12 @@ let OrgsController = class OrgsController {
             for (const p of perms.rows) {
                 await client.query('insert into role_permissions(role_id, permission_id) values ($1,$2) on conflict do nothing', [roleId, p.id]);
             }
-            // Membership
+            // Membership at org level
             await client.query('insert into memberships(user_id, org_id, role, role_id) values ($1,$2,$3,$4)', [user.id, org.id, 'org', roleId]);
+            // Also add client membership for default company
+            if (clientId) {
+                await client.query('insert into client_members(user_id, client_id, role) values ($1,$2,$3) on conflict do nothing', [user.id, clientId, 'client-admin']);
+            }
             await client.query('commit');
             // Build perms list for token
             const permsKeys = await client.query('select key from permissions');

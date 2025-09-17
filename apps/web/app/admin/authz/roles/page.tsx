@@ -34,7 +34,7 @@ export default async function AuthzRoles({ searchParams }: { searchParams?: { q?
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">AuthZ Roles</h1>
       <form action="/admin/authz/roles" className="flex gap-2 items-end">
-        <Input name="q" placeholder="Search name" defaultValue={q} className="w-64" />
+        <Input name="q" placeholder="Search name" defaultValue={q} className="w-full md:w-64" />
         <Button type="submit">Search</Button>
       </form>
       <AdminRoleCreateForm />

@@ -353,3 +353,9 @@ Dependencies
 
 Files touched
 - API: `apps/api/src/auth.controller.ts`, `apps/api/src/mailer.ts` (added `sendPasswordResetEmail`).
+- 030_user_profile.sql: adds user_profiles and user_preferences; links to users.
+- API: new MeController with endpoints:
+  - GET/POST /me/profile — upsert personal info (name, address, etc.).
+  - GET/POST /me/preferences — theme (light/dark/system), color scheme (default, red, rose, orange, green, blue, yellow, violet), tz/language/notifications.
+- Web: ThemeProvider applies theme + color scheme (html[data-color], dark class). New Settings page `/admin/settings` with Appearance and Profile sections. Admin sidebar gets a Settings link at bottom.
+- Redesign plan: added `redesign.MD` documenting goals, scope, and rollout for the `design-2` branch.

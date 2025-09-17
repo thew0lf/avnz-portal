@@ -14,11 +14,10 @@ const PopoverContent = React.forwardRef<
     ref={ref}
     align={align}
     sideOffset={sideOffset}
-    className={cn('z-50 w-72 rounded-md border bg-white p-2 text-sm shadow outline-none', className)}
+    className={cn('z-50 w-72 max-w-[calc(100vw-2rem)] rounded-md border bg-white p-2 text-sm shadow outline-none', className)}
     {...props}
   />
 ))
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 
 export { Popover, PopoverTrigger, PopoverContent }
-

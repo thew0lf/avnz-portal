@@ -1,0 +1,36 @@
+namespace: avnz-staging
+domain: "staging.portal.example.com"
+acmArn: "arn:aws:acm:us-east-1:123456789012:certificate/yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+
+web:
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-web
+    tag: REPLACE_STAGING_TAG
+  env:
+    NEXT_PUBLIC_API_BASE: "https://staging.portal.example.com"
+    API_BASE: "http://api:3001"
+
+api:
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-api
+    tag: REPLACE_STAGING_TAG
+
+ai:
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-ai
+    tag: REPLACE_STAGING_TAG
+
+externalSecrets:
+  enabled: false
+  clusterSecretStoreName: aws-ssm-staging
+  storeKind: ClusterSecretStore
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: /avnzr-staging/db/url
+    - secretKey: AUTH_SECRET
+      remoteRef:
+        key: /avnzr-staging/auth/secret
+    - secretKey: APP_AES_KEY
+      remoteRef:
+        key: /avnzr-staging/app/aes_key

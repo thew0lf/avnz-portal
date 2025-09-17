@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: {{ .Values.namespace }}
+  labels: { app: web }
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels: { app: web }
+  template:
+    metadata:
+      labels: { app: web }
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_BASE
+              value: {{ .Values.web.env.NEXT_PUBLIC_API_BASE | quote }}
+            - name: API_BASE
+              value: {{ .Values.web.env.API_BASE | quote }}
+

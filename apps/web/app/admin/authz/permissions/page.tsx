@@ -49,7 +49,7 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
       <h1 className="text-xl font-semibold">AuthZ Permissions</h1>
       <PermissionCreateForm defaultDomain="node" />
       <form action="/admin/authz/permissions" className="flex gap-2 items-end mt-2">
-        <Input name="q" placeholder="Search domain.resource.action" defaultValue={q} className="w-64" />
+        <Input name="q" placeholder="Search domain.resource.action" defaultValue={q} className="w-full md:w-64" />
         <Button type="submit">Search</Button>
       </form>
       {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
@@ -80,7 +80,7 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((p:any)=>(
           <div key={p.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium">{p.domain}.{p.resource_type}.{p.action_name}</div>
+            <div className="text-sm font-medium break-words">{p.domain}.{p.resource_type}.{p.action_name}</div>
             <div className="mt-1"><Badge variant="outline">Min role: {p.min_role_id}</Badge></div>
             <div className="mt-2"><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} /></div>
           </div>

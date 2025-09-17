@@ -1,0 +1,20 @@
+{{- if and .Values.mailer.enabled .Values.mailer.keda.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: mailer-worker-scaler
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    name: mailer-worker
+  minReplicaCount: {{ .Values.mailer.keda.minReplicaCount }}
+  maxReplicaCount: {{ .Values.mailer.keda.maxReplicaCount }}
+  cooldownPeriod: 60
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: {{ .Values.mailer.env.SQS_QUEUE_URL | quote }}
+        awsRegion: {{ .Values.mailer.env.AWS_REGION | quote }}
+        queueLength: {{ .Values.mailer.keda.queueLength | quote }}
+{{- end }}
+

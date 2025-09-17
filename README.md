@@ -3,6 +3,7 @@
 ## Status
 - Authoritative project brief and change log: see `SUMMARY.MD`.
 - Pending work and options: see `TODOS.md` for a current, high-level checklist.
+- Redesign track: see `redesign.MD` (branch: `design-2`).
 
 
 **Stacks**

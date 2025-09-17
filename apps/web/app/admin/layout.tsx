@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { useLocalStorage } from './useLocalStorage'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
@@ -37,8 +38,13 @@ function Section({ title, icon, children, defaultOpen = true }: SectionProps) {
 }
 
 function MenuLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const pathname = usePathname()
+  const active = pathname === href || pathname.startsWith(href + '/')
   return (
-    <Link className="px-2 py-1 touchable rounded hover:bg-gray-100 underline-offset-2 hover:underline" href={href}>
+    <Link
+      className={`px-2 py-1 touchable rounded underline-offset-2 ${active ? 'bg-gray-100 font-medium' : 'hover:bg-gray-100 hover:underline'}`}
+      href={href}
+    >
       {children}
     </Link>
   )
@@ -129,7 +135,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const canAdmin = roles.split(',').map((s) => s.trim()).includes('org')
   return (
     <div className="grid md:grid-cols-[280px_1fr] min-h-screen">
-      <aside className="hidden md:block border-r p-4 space-y-3 bg-white">
+      <aside className="hidden md:flex md:flex-col border-r p-4 space-y-3 bg-white min-h-screen sticky top-0">
         <div className="flex items-center gap-2">
           {Icons.dashboard}
           <h2 className="text-lg font-semibold">Admin Portal</h2>
@@ -182,6 +188,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </Section>
         </nav>
+        <div className="mt-auto pt-4 border-t">
+          <div className="grid gap-2">
+            <form action="/api/logout" method="post">
+              <button type="submit" className="px-2 py-1 touchable rounded hover:bg-gray-100 underline-offset-2 hover:underline w-full text-left">Sign out</button>
+            </form>
+          </div>
+        </div>
       </aside>
       <main className="container py-4 md:py-6" suppressHydrationWarning>
         <div className="flex items-center justify-between mb-4">

@@ -82,3 +82,13 @@ body{ @apply bg-gray-50 text-gray-900; overflow-x: hidden; }
 
 /* Touch target utility */
 .touchable { min-height: 40px; padding: 0.5rem 0.75rem; }
+
+/* Color scheme overrides for primary/ring; values are approximate and product-safe */
+html[data-color='default'] { --primary: 222 47% 11%; --ring: 222 84% 5%; }
+html[data-color='red']     { --primary: 0 72% 45%;  --ring: 0 72% 45%; }
+html[data-color='rose']    { --primary: 350 70% 45%; --ring: 350 70% 45%; }
+html[data-color='orange']  { --primary: 24 85% 45%;  --ring: 24 85% 45%; }
+html[data-color='green']   { --primary: 142 40% 35%; --ring: 142 40% 35%; }
+html[data-color='blue']    { --primary: 217 90% 48%; --ring: 217 90% 48%; }
+html[data-color='yellow']  { --primary: 48 96% 40%;  --ring: 48 96% 40%; }
+html[data-color='violet']  { --primary: 257 70% 50%; --ring: 257 70% 50%; }
