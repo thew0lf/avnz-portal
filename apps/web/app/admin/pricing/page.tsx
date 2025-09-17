@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import PricingRuleForm from '@/components/admin/forms/PricingRuleForm'
 
 // SPA handled via PricingRuleForm
@@ -26,11 +27,19 @@ export default async function PricingPage() {
   const rows: any[] = data.rows || []
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Pricing Rules</h1>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Pricing Rules</h1></div>
 
-      <PricingRuleForm />
-      <div className="overflow-x-auto">
-        <Table>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Create rule</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <PricingRuleForm />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">All rules</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
           <TableHeader>
             <tr>
               <TableHead>Scope</TableHead>
@@ -59,8 +68,10 @@ export default async function PricingPage() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
-      </div>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   )
 }

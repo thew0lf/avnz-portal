@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import SecuritySettingsForm from '@/components/admin/forms/SecuritySettingsForm'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 async function save(formData: FormData){ 'use server'
   const nodeId = String(formData.get('nodeId')||'')
@@ -29,9 +30,14 @@ export default async function SecuritySettings(){
   const cfg = await r.json().catch(()=>({}))
   const policy = cfg?.password_policy || {}
   return (
-    <main className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Security Settings</h1>
-      <SecuritySettingsForm defaults={cfg || {}} />
+    <main className="p-6 space-y-6">
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Security Settings</h1></div>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Policy</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <SecuritySettingsForm defaults={cfg || {}} />
+        </CardContent>
+      </Card>
     </main>
   )
 }
