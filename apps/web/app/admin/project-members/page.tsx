@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import ProjectFilter from '@/components/admin/forms/ProjectFilter'
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import ProjectMemberAddForm from '@/components/admin/forms/ProjectMemberAddForm'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { revalidatePath } from 'next/cache'
 
 export default async function ProjectMembersPage({ searchParams }: { searchParams?: { project?: string } }) {
@@ -25,28 +26,43 @@ export default async function ProjectMembersPage({ searchParams }: { searchParam
 
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Project Members</h1>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Project Members</h1></div>
 
-      <ProjectFilter projects={projects} projectCode={projectCode} />
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Select project</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ProjectFilter projects={projects} projectCode={projectCode} />
+        </CardContent>
+      </Card>
 
-      <ProjectMemberAddForm projectCode={projectCode} roles={roles} />
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Add member</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ProjectMemberAddForm projectCode={projectCode} roles={roles} />
+        </CardContent>
+      </Card>
 
       {projectCode && (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader><tr><TableHead>Email</TableHead><TableHead>Username</TableHead><TableHead>Role</TableHead><TableHead>Since</TableHead></tr></TableHeader>
-            <TableBody>
-              {rows.map((r:any)=>(
-                <TableRow key={r.user_id}>
-                  <TableCell>{r.email}</TableCell>
-                  <TableCell>{r.username||''}</TableCell>
-                  <TableCell>{r.role}</TableCell>
-                  <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <Card>
+          <CardHeader className="px-4 py-3"><CardTitle className="text-base">Members in project</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><tr><TableHead>Email</TableHead><TableHead>Username</TableHead><TableHead>Role</TableHead><TableHead>Since</TableHead></tr></TableHeader>
+                <TableBody>
+                  {rows.map((r:any)=>(
+                    <TableRow key={r.user_id}>
+                      <TableCell>{r.email}</TableCell>
+                      <TableCell>{r.username||''}</TableCell>
+                      <TableCell>{r.role}</TableCell>
+                      <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </main>
   )

@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
 import InviteCreateForm from '@/components/admin/forms/InviteCreateForm'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { ActionButton } from '@/components/admin/ActionButton'
 
 // SPA handled via InviteCreateForm and ActionButton
@@ -35,11 +36,19 @@ export default async function InvitesPage() {
 
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Invites</h1>
-      <InviteCreateForm clients={clients} canSelectClient={canSelectClient} />
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Invites</h1></div>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Create invite</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <InviteCreateForm clients={clients} canSelectClient={canSelectClient} />
+        </CardContent>
+      </Card>
 
-      <div className="overflow-x-auto">
-        <Table>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">All invites</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
           <TableHeader>
             <tr>
               <TableHead>Email</TableHead>
@@ -64,8 +73,10 @@ export default async function InvitesPage() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
-      </div>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   )
 }
