@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn } from '@/components/ui/data-table'
+import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn, makeSelectionColumn } from '@/components/ui/data-table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ClientCreateForm from '@/components/admin/forms/ClientCreateForm'
 import { revalidatePath } from 'next/cache'
@@ -26,6 +26,7 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
   const nextOffset = offset + limit
   const prevOffset = Math.max(0, offset - limit)
   const columns: CommonColumn<any>[] = [
+    makeSelectionColumn(),
     makeDragColumn(),
     { accessorKey: 'code', header: 'Code', cell: ({ row }) => row.original.code },
     { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name },
