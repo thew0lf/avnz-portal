@@ -8,6 +8,7 @@ Key conventions
     - Log actions succinctly via commits and PR notes.
     - Use pre‑push checks (health, smoke, walkthrough).
     - Request escalated permissions for shell commands as needed with clear justification.
+    - Rebuild Docker services and run health/smoke/walkthrough checks proactively to validate changes.
   - Default Mode: Ask before potentially destructive actions (volume prune, data wipes, force pushes).
 - Tooling & runtime
   - Docker is the local orchestrator. Agents may run `docker compose` commands (build, up, down, logs, exec) when needed to build, reset, or verify services.
