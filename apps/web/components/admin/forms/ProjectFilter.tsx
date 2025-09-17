@@ -2,7 +2,6 @@
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import SearchableRSelect from '@/components/ui/searchable-rselect'
-import * as React from 'react'
 
 export default function ProjectFilter({ projects, projectCode }: { projects: any[]; projectCode: string }){
   const [value, setValue] = React.useState(projectCode || '')

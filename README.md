@@ -1,4 +1,9 @@
-# avnzr-portal — Full V3 (build 1757378394)
+# avnzr-portal — Full V3 (build 1757899728)
+
+## Status
+- Authoritative project brief and change log: see `SUMMARY.MD`.
+- Pending work and options: see `TODOS.md` for a current, high-level checklist.
+
 
 **Stacks**
 - **DB:** Postgres 15 + pgvector
@@ -25,6 +30,120 @@ docker compose up -d --build api ai web
 # 4) admin
 open http://localhost:3000/admin/pricing
 ```
+
+## Requirements
+- Docker Desktop installed and running (Docker Engine + docker compose v2).
+- Internet access to pull base images on first run.
+- Many commands and scripts in this repo invoke Docker (build/up/down/logs). Ensure Docker is started; we will run Docker commands when needed.
+
+## Full Reset & Health Check (Local)
+If your database or migrations get out of sync, perform a clean reset and verify health.
+
+Full reset
+- Ensure Docker Desktop is running.
+- From repo root:
+  - Stop and remove containers/volumes: `docker compose down -v --remove-orphans`
+  - Optional prune to reclaim space: `docker system prune -af --volumes`
+  - Start DB first: `docker compose up -d db`
+  - Rebuild and start services: `docker compose up -d --build api ai web`
+- Shortcut: use `scripts/db-reset.sh` (interactive, destructive) to perform the above.
+
+Re-run a specific migration (optional)
+- To re-apply a fixed migration, delete its row from `schema_migrations` and restart API:
+  - `docker compose exec -T db psql -U postgres -d avnzr_portal -c "delete from schema_migrations where filename='NNN_your_migration.sql';"`
+  - `docker compose up -d api`
+- The API logs show: `Applying migration NNN_*.sql` when it re-runs.
+
+Health checks
+- API health: `curl -fsS http://localhost:3001/health && echo 'API healthy'`
+- Compose status: `docker compose ps` (api should report `healthy`).
+- Logs: `docker compose logs -f api` (look for migration output and startup banner).
+
+Notes
+- API waits for healthy `db` and `redis` before starting; `web` waits for a healthy `api`.
+- Migrations run on API startup; base bootstrap migrations are idempotent.
+
+### Redis (optional, recommended)
+Docker includes a `redis` service for rate limiting, caching, and session-like state. Services receive `REDIS_URL=redis://redis:6379`. The API falls back to in-memory if Redis is absent. For production, provision ElastiCache Redis (see `terraform/redis.tf`). A LocalStack service is also included to emulate select AWS services (ECR/IAM/STS) for local tests.
+
+## AWS Deployment (Terraform) — EKS + Argo CD
+- See `terraform/` for an EKS + Argo CD blueprint: VPC, EKS (managed node group), ALB + CloudFront + WAF, RDS Postgres (KMS), and ElastiCache Redis.
+- Argo CD is installed via Helm and exposes a LoadBalancer Service; use it to manage app deployments (GitOps).
+- Store secrets in AWS Secrets Manager or SSM (SecureString). App reads boot secrets from SSM; provider secrets remain in DB (encrypted with AES key from SSM).
+
+High-level steps
+1. `cd terraform && terraform init`
+2. Copy and edit variables: `cp terraform.tfvars.example terraform.tfvars`, then set:
+   - `project_name`, `region`, `domain_name`, `hosted_zone_id`, `acm_certificate_arn`
+   - EKS sizing: `cluster_name`, `node_instance_types`, desired/min/max
+   - Image refs: `api_image`, `web_image`, `ai_image`
+   - SSM names: `ssm_auth_secret_name`, `ssm_db_url_name`, `ssm_app_aes_key_name`, and DB password name
+3. `terraform apply`
+4. Configure kubectl: `aws eks update-kubeconfig --name <cluster>`
+5. Access Argo CD: `kubectl -n argocd port-forward svc/argocd-server 8080:443` or via the provisioned LoadBalancer hostname.
+6. Apply Argo Applications (Helm GitOps):
+   - Prod: `kubectl apply -n argocd -f argo/application-helm.yaml`
+   - Staging: `kubectl apply -n argocd -f argo/application-helm-staging.yaml`
+   - Update chart values in `charts/avnz-portal/values*.yaml` (namespace, domain, acmArn). CI updates image repo/tags automatically on push.
+
+7. Bootstrap cluster controllers (recommended):
+   - External Secrets Operator (ESO): `kubectl apply -n argocd -f argo/external-secrets.yaml`
+     - Replace `REPLACE_ES_IRSA_ROLE_ARN` with the output `external_secrets_irsa_role_arn` from Terraform (IRSA role for ESO).
+     - Configure ClusterSecretStores for AWS SSM/Secrets Manager and set Helm values (externalSecrets.*):
+       - Apply stores via Argo: `kubectl apply -n argocd -f argo/eso-stores.yaml` (edit `k8s/eso/*` to set `REPLACE_AWS_REGION`).
+       - Convenience: use `scripts/inject-arns.sh` to replace placeholders in Argo/ESO manifests:
+         - `ES_IRSA_ARN=$(terraform output -raw external_secrets_irsa_role_arn) \
+            DNS_IRSA_ARN=$(terraform output -raw external_dns_irsa_role_arn) \
+            AWS_REGION=us-east-1 \
+            PROD_DOMAIN=portal.example.com STAGING_DOMAIN=staging.portal.example.com \
+            PRIVATE_DOMAIN=internal.example.com \
+            bash scripts/inject-arns.sh`
+       - Provided stores: `aws-ssm`, `aws-secretsmanager` (prod) and `aws-ssm-staging`, `aws-secretsmanager-staging` (staging).
+       - In Helm values:
+         - Prod: `charts/avnz-portal/values-prod.yaml` → `externalSecrets.clusterSecretStoreName: aws-ssm`, keys under `/avnzr/*`.
+         - Staging: `charts/avnz-portal/values-staging.yaml` → `externalSecrets.clusterSecretStoreName: aws-ssm-staging`, keys under `/avnzr-staging/*`.
+   - external-dns: `kubectl apply -n argocd -f argo/external-dns.yaml`
+     - Replace `REPLACE_DNS_IRSA_ROLE_ARN` with the Terraform output `external_dns_irsa_role_arn`.
+     - Replace `REPLACE_PROD_DOMAIN` and `REPLACE_STAGING_DOMAIN` with your domains to manage.
+    - For internal ALB/NLB and private zones, use: `kubectl apply -n argocd -f argo/external-dns-internal.yaml` and set `REPLACE_PRIVATE_DOMAIN`.
+   
+8. DNS & TLS (Terraform toggles):
+   - `use_cloudfront_prod` / `use_cloudfront_staging` control whether Route53 A/AAAA aliases point to CloudFront or directly to ALB.
+   - Terraform provisions ACM (us-east-1) and validation records when using CloudFront.
+
+### Helm chart options
+- Exposure (values.yaml):
+  - `exposure.type: ingress` uses AWS ALB Ingress Controller with path-based routing (/api, /ai, /).
+  - `exposure.type: nlb-web` creates an NLB Service exposing only `web` on port 80 (no path-based routing; `web` must call `api/ai` internally).
+- Ingress scheme: `ingress.scheme: internet-facing` or `internal`.
+- ExternalDNS support: set `externalDNS.enabled: true` and `externalDNS.hostname` to let external-dns manage Route53 records.
+- External Secrets:
+  - Enable syncing from AWS SSM/Secrets Manager via External Secrets Operator: `externalSecrets.enabled: true`.
+  - Provide `externalSecrets.clusterSecretStoreName` (and `storeKind`) referencing a pre-configured ClusterSecretStore, or set `externalSecrets.store: secretsmanager` to auto-select a store name if not provided.
+  - Map keys under `externalSecrets.data` to populate the in-cluster `app-secrets` Secret (DATABASE_URL, AUTH_SECRET, APP_AES_KEY).
+
+### Internal-only deployment
+- Use the internal Argo Application: `kubectl apply -n argocd -f argo/application-helm-internal.yaml`.
+- This uses `charts/avnz-portal/values-internal.yaml`:
+  - `exposure.type: nlb-web` for an NLB Service (no ALB/CloudFront needed).
+  - Optionally enable `externalDNS.enabled` for a private Route53 zone (see `argo/external-dns-internal.yaml`).
+  - External Secrets may reference `/avnzr-internal/*` SSM keys if desired.
+7. Update placeholders in `k8s/` manifests:
+   - Replace `REPLACE_WITH_ECR` image registry, `REPLACE_WITH_DOMAIN`, and `REPLACE_WITH_ACM_ARN` in Ingress.
+   - Create secrets: `kubectl apply -f k8s/secrets.example.yaml` (use real values).
+8. The AWS Load Balancer Controller provisions an ALB from `k8s/ingress.yaml` for `/`, `/api`, and `/ai` paths.
+9. To target staging vs prod, the CI updates image tags in `k8s/overlays/staging` and `k8s/overlays/prod`. You can also manually override tags/registries in the overlay kustomization files.
+
+### LocalStack (optional)
+- Start LocalStack alongside dev services: `docker compose up -d localstack`
+- Provision minimal ECR repos to validate pushes:
+  - `cd terraform/localstack && terraform init && terraform apply -var project_name=avnzr-local -var region=us-east-1`
+- Seed LocalStack ECR with dummy images:
+  - `bash scripts/seed-localstack-ecr.sh` (requires Docker and AWS CLI; uses endpoint http://localhost:4566)
+- Note: Full infra (EKS/ALB/CloudFront/WAF/RDS/ElastiCache) is not supported in LocalStack; use real AWS for those.
+
+Notes
+- The repo still contains an ECS Fargate skeleton for reference; the recommended path is EKS + Argo CD for GitOps.
 
 ## Contributor Guide
 

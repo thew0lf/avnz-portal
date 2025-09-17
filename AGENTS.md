@@ -3,6 +3,10 @@
 This repository uses `SUMMARY.MD` as the authoritative, always‑up‑to‑date project brief. Before making changes, READ `SUMMARY.MD` end‑to‑end to understand the architecture, conventions, and recent changes. After making any substantive change, append a concise update to `SUMMARY.MD` (files touched, endpoints, migrations, secrets/env expectations, and access notes).
 
 Key conventions
+- Tooling & runtime
+  - Docker is the local orchestrator. Agents may run `docker compose` commands (build, up, down, logs, exec) when needed to build, reset, or verify services.
+  - Prefer containerized workflows; do not assume host Node/Python are installed.
+  - When destructive (`down -v`, pruning), prompt or clearly communicate intent.
 - Security & compliance
   - Client/Wizard forms: always use `method="post"`; avoid querystring submissions.
   - Forgot password is non‑enumerating and redirects back to login with a neutral toast.
@@ -44,4 +48,3 @@ When adding features
 4) Append an entry to `SUMMARY.MD` documenting the change.
 
 If conflicts or ambiguity arise, prefer the patterns and requirements documented in `SUMMARY.MD`.
-

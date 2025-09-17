@@ -58,7 +58,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
         <AppProviders>{children}</AppProviders>
         {/* PWA registration */}
-        {/* @ts-expect-error Client Component below */}
         <PwaRegister />
         <footer className="sa-bottom" />
       </body>

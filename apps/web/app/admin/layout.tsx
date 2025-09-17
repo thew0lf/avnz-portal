@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocalStorage } from './useLocalStorage'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
@@ -261,7 +261,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </SheetContent>
             </Sheet>
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap min-w-0 items-center gap-3 text-sm text-muted-foreground">
             {mounted && (
               <Dropdown label="Org" storageKey="orgFilter" placeholder="All Orgs" showSelection={false} buttonText="Org" optionsProvider={async()=>{ try{ const r=await fetch('/api/orgs'); const d=await r.json(); return [{id:'',name:'All Orgs'}, ...((d.rows||[]).map((o:any)=>({ id:o.id, name:o.name })))] } catch { return [{id:'',name:'All Orgs'}] } }} />
             )}
@@ -294,9 +294,9 @@ function ProjectDropdown({ projectCode, setProjectCode, loadProjects, projects }
     try { await fetch('/api/admin/context', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ projectCode: code }) }) } catch {}
   }
   return (
-    <div className="relative inline-flex items-center gap-1">
+    <div className="relative inline-flex items-center gap-1 min-w-0">
       <span>Projects</span>
-      <button className="border rounded h-8 px-2 bg-white" onClick={()=>{ setOpen(!open); if(!projects.length) loadProjects() }}>{projectCode? (projects.find((p:any)=>String(p.code||'')===String(projectCode))?.name || 'Selected') : 'All Projects'}</button>
+      <button className="border rounded h-8 px-2 bg-white max-w-[45vw] overflow-hidden text-ellipsis" onClick={()=>{ setOpen(!open); if(!projects.length) loadProjects() }}>{projectCode? (projects.find((p:any)=>String(p.code||'')===String(projectCode))?.name || 'Selected') : 'All Projects'}</button>
       {open && (
         <div className="absolute z-10 mt-1 w-64 bg-white border rounded shadow">
           <div className="p-2"><input className="w-full border rounded px-2 h-8" placeholder="Search projects" value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} /></div>
@@ -321,8 +321,8 @@ function UsersDropdown(){
   async function load(){ if (items.length) return; try{ const r=await fetch('/api/memberships'); const d=await r.json(); setItems((d.rows||[]).map((m:any)=>({ id:m.user_id, name: m.email || m.username || m.user_id }))) } catch{} }
   const filtered = items.filter(i=> i.name.toLowerCase().includes(q.toLowerCase()))
   return (
-    <div className="relative">
-      <button className="border rounded h-8 px-2 bg-white" onClick={()=>{ setOpen(!open); if(!items.length) load() }}>Users</button>
+    <div className="relative min-w-0">
+      <button className="border rounded h-8 px-2 bg-white max-w-[45vw] overflow-hidden text-ellipsis" onClick={()=>{ setOpen(!open); if(!items.length) load() }}>Users</button>
       {open && (
         <div className="absolute z-10 mt-1 w-64 bg-white border rounded shadow">
           <div className="p-2"><input className="w-full border rounded px-2 h-8" placeholder="Search users" value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} /></div>
@@ -347,11 +347,11 @@ function Dropdown({ label, storageKey, placeholder, optionsProvider, showSelecti
   const filtered = items.filter((i:any)=> (i.name||'').toLowerCase().includes(q.toLowerCase()))
   const buttonLabel = buttonText || (showSelection ? (value? (items.find((i:any)=>String(i.id)===String(value))?.name || 'Selected') : placeholder) : label)
   return (
-    <div className="inline-flex items-center gap-1">
+    <div className="inline-flex items-center gap-1 min-w-0">
       <span>{label}</span>
       <Popover>
         <PopoverTrigger asChild>
-          <button className="border rounded h-8 px-2 bg-white" onClick={()=>load()}>{buttonLabel}</button>
+          <button className="border rounded h-8 px-2 bg-white max-w-[45vw] overflow-hidden text-ellipsis" onClick={()=>load()}>{buttonLabel}</button>
         </PopoverTrigger>
         <PopoverContent className="w-64">
           <div className="p-2"><input className="w-full border rounded px-2 h-8" placeholder={`Search ${label.toLowerCase()}`} value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} /></div>

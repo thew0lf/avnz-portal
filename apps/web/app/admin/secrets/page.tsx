@@ -96,7 +96,6 @@ export default async function SecretsPage(){
     <main className="p-6 space-y-6">
       <h1 className="text-xl font-semibold">Service Secrets</h1>
       <p className="text-sm text-muted-foreground">Org-level defaults and optional client overrides. Values are encrypted at rest.</p>
-      {/* @ts-expect-error Async child */}
       <SecretsForm clients={clients} configs={configs} nodeId={nodeId} />
     </main>
   )
