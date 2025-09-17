@@ -36,11 +36,12 @@ open http://localhost:3000/admin/pricing
 - Internet access to pull base images on first run.
 - Many commands and scripts in this repo invoke Docker (build/up/down/logs). Ensure Docker is started; we will run Docker commands when needed.
 
-## Pre‑push Checks
-- Health test: `bash scripts/health-check.sh`
-- Smoke test: `bash scripts/smoke-test.sh`
-- Walkthrough (non-destructive): `bash scripts/walkthrough.sh`
-- If any check fails, run a full reset and rebuild (see “Full Reset & Health Check”) and retry.
+## Pre‑push Requirements
+- You must run and pass all checks locally before pushing:
+  - Health test: `bash scripts/health-check.sh`
+  - Smoke test: `bash scripts/smoke-test.sh`
+  - Walkthrough (non-destructive): `bash scripts/walkthrough.sh`
+- If any check fails, run a full reset and rebuild (see “Full Reset & Health Check”), fix issues, and retry.
 
 ## Full Reset & Health Check (Local)
 If your database or migrations get out of sync, perform a clean reset and verify health.

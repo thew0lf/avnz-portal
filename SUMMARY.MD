@@ -155,7 +155,7 @@ Helm Chart: Mailer Worker
 Update 2025-09-16 (Docs)
 - README: added "Full Reset & Health Check" and a new "Requirements" section noting Docker Desktop and that repo scripts/commands will run Docker when needed.
 - AGENTS.md: clarified agents may run `docker compose` to build/reset/verify services; prefer containerized workflows.
- - Added scripts: `scripts/health-check.sh`, `scripts/smoke-test.sh`, `scripts/walkthrough.sh`. New README "Pre‑push Checks" section references them.
+ - Added scripts: `scripts/health-check.sh`, `scripts/smoke-test.sh`, `scripts/walkthrough.sh`. README now has a "Pre‑push Requirements" section (must run/pass locally). AGENTS clarifies these are required before push.
 
 ## Environment & Config Migration
 - .env.example now only needs minimal boot config; service secrets (SendGrid/Twilio/AWS) should be stored in DB service_configs.
