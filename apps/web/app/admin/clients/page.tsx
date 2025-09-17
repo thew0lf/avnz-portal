@@ -46,7 +46,7 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
       </Card>
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All clients</CardTitle></CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-4 pt-0">
           <div className="overflow-x-auto">
             <Table>
           <TableHeader>
