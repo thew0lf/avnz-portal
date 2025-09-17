@@ -4,7 +4,7 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ProjectCreateForm from '@/components/admin/forms/ProjectCreateForm'
@@ -24,6 +24,14 @@ export default async function ProjectsPage({ searchParams }: { searchParams?: { 
   const rows = data.rows || []
   const nextOffset = offset + limit
   const prevOffset = Math.max(0, offset - limit)
+  const columns: CommonColumn<any>[] = [
+    makeDragColumn(),
+    { accessorKey: 'code', header: 'Code', cell: ({ row }) => row.original.code || '' },
+    { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name },
+    { accessorKey: 'client_code', header: 'Client', cell: ({ row }) => row.original.client_code || '' },
+    { accessorKey: 'created_at', header: 'Created', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone: 'UTC' }) },
+    makeActionsColumn({ viewHref: (r:any)=>`/admin/projects` }),
+  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -48,28 +56,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams?: { 
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All projects</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <tr><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Client</TableHead><TableHead>Created</TableHead></tr>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r:any)=>(
-                  <TableRow key={r.id}>
-                    <TableCell>{r.code||''}</TableCell>
-                    <TableCell>{r.name}</TableCell>
-                    <TableCell>{r.client_code||''}</TableCell>
-                    <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="flex justify-between items-center mt-3 px-4 pb-4">
-            <a className="underline" href={`/admin/projects?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
-            <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
-            <a className="underline" href={`/admin/projects?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
-          </div>
+          <DataTable data={rows} columns={columns} enableDnD />
         </CardContent>
       </Card>
     </main>
