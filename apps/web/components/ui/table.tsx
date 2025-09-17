@@ -18,11 +18,11 @@ export function TableRow({ className = '', ...props }: React.HTMLAttributes<HTML
 }
 
 export function TableHead({ className = '', ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={`py-2 px-4 ${className}`} {...props} />
+  return <th className={`py-2 pr-4 ${className}`} {...props} />
 }
 
 export function TableCell({ className = '', ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={`py-2 px-4 ${className}`} {...props} />
+  return <td className={`py-2 pr-4 ${className}`} {...props} />
 }
 
 export function TableCaption({ className = '', ...props }: React.HTMLAttributes<HTMLTableCaptionElement>) {

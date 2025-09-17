@@ -27,7 +27,7 @@ export default function Compliance(){
       </Card>
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">Results</CardTitle></CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-4 pt-0">
           <div className='overflow-auto'>
             <table className='w-full text-sm'>
               <thead><tr className='text-left'><th>Day</th><th>Email</th><th>Phone</th><th>SSN</th><th>CC</th></tr></thead>

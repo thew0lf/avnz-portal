@@ -15,7 +15,7 @@ export default function Usage(){
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Usage</h1></div>
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">Summary</CardTitle></CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-4 pt-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>

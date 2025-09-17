@@ -45,7 +45,7 @@ export default async function ProjectMembersPage({ searchParams }: { searchParam
       {projectCode && (
         <Card>
           <CardHeader className="px-4 py-3"><CardTitle className="text-base">Members in project</CardTitle></CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-4 pt-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader><tr><TableHead>Email</TableHead><TableHead>Username</TableHead><TableHead>Role</TableHead><TableHead>Since</TableHead></tr></TableHeader>
