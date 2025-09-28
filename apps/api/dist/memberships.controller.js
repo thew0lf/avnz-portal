@@ -19,12 +19,34 @@ let MembershipsController = class MembershipsController {
         if (!org)
             throw new BadRequestException('org required');
         const perms = req.auth?.perms || [];
-        if (!perms.includes('manage_members') && !perms.includes('admin'))
-            throw new ForbiddenException('manage_members required');
+        const url = new URL(req.url, 'http://local');
+        const clientId = url.searchParams.get('client_id') || '';
         const client = await getClientForReq(req);
         try {
-            const { rows } = await client.query(`select m.user_id, m.role, u.email, u.username, m.created_at
-         from memberships m join users u on u.id=m.user_id where m.org_id=$1 order by u.email asc`, [org]);
+            // Permissions: org-wide listing requires manage_members or admin.
+            // If client_id is provided and requester manages that client (or has admin/manage_members), allow returning client members.
+            if (!clientId) {
+                if (!perms.includes('manage_members') && !perms.includes('admin'))
+                    throw new ForbiddenException('manage_members required');
+                const { rows } = await client.query(`select m.user_id, m.role, u.email, u.username, m.created_at
+             from memberships m join users u on u.id=m.user_id
+            where m.org_id=$1
+            order by coalesce(u.email,u.username) asc`, [org]);
+                return { rows };
+            }
+            // client-scoped listing
+            if (!perms.includes('manage_members') && !perms.includes('admin')) {
+                // allow manage_clients only if requester is the client manager
+                if (!perms.includes('manage_clients'))
+                    throw new ForbiddenException('forbidden');
+                const chk = await client.query('select 1 from clients where id=$1 and org_id=$2 and manager_user_id=$3', [clientId, org, req.auth?.userId]);
+                if (!chk.rows[0])
+                    throw new ForbiddenException('forbidden');
+            }
+            const { rows } = await client.query(`select cm.user_id, 'client'::text as role, u.email, u.username, cm.created_at
+           from client_members cm join users u on u.id=cm.user_id
+          where cm.client_id=$1
+          order by coalesce(u.email,u.username) asc`, [clientId]);
             return { rows };
         }
         finally {

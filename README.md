@@ -1,8 +1,9 @@
-# avnzr-portal — Full V3 (build 1757899728)
+# avnz-portal — Full V3 (build 1757899728)
 
 ## Status
 - Authoritative project brief and change log: see `SUMMARY.MD`.
 - Pending work and options: see `TODOS.md` for a current, high-level checklist.
+- Redesign track: see `redesign.MD` (branch: `design-2`).
 
 
 **Stacks**
@@ -27,17 +28,46 @@ docker compose up -d db
 # 3) run services
 docker compose up -d --build api ai web
 
-# 4) admin
-open http://localhost:3000/admin/pricing
+# 3b) optional: expose API via ngrok for Slack/events/webhooks
+# Set NGROK_AUTHTOKEN in .env first, then start ngrok (tunnels http://api:3001)
+docker compose up -d ngrok
+
+# 4) register, onboard, then sign in
+# Visit the app, register your first org, complete the Onboarding wizard (optional provider secrets), then sign in
+open http://localhost:3000
+# After signing in, navigate to Admin → Pricing or open:
+# http://localhost:3000/admin/pricing
 ```
 
 ## Requirements
 - Docker Desktop installed and running (Docker Engine + docker compose v2).
 - Internet access to pull base images on first run.
 - Many commands and scripts in this repo invoke Docker (build/up/down/logs). Ensure Docker is started; we will run Docker commands when needed.
+- Deletion policy: All deletes are soft-deletes. APIs should set `deleted_at` and readers must filter on `deleted_at IS NULL`.
+- Build & checks: During updates, the agent may proactively rebuild Docker services and run health/smoke/walkthrough checks to validate changes.
+
+Start-of-session checklist (Codex/agents)
+- Review docs for context: read `SUMMARY.MD` end‑to‑end, skim `README.md`, `AGENTS.md`, `TODOS.md`, and `CHANGELOG.md` if present.
+- Verify environment health:
+  - `bash scripts/health-check.sh`
+  - `bash scripts/smoke-test.sh`
+  - `bash scripts/walkthrough.sh`
+- Inspect recent logs for errors/warnings:
+  - `docker compose ps`
+  - `docker compose logs --since 15m api web`
+- If issues arise, consider a local reset (confirm unless in Brave Mode):
+  - `docker compose down -v --remove-orphans && docker system prune -af --volumes`
+  - `docker compose up -d db && docker compose up -d --build api ai web ngrok`
+
+Note: Brave Mode is the default in this repo. Agents run the above Docker and script commands automatically without asking. Destructive actions (like volume prune) are still called out explicitly unless the user has already consented within the session.
+
+Git hooks (optional)
+- You can enable the included pre-commit hook to run lint automatically before commits:
+  - `git config core.hooksPath .githooks`
 
 ## Pre‑push Requirements
 - You must run and pass all checks locally before pushing:
+  - Lint: `bash scripts/lint.sh` (web/api ESLint)
   - Health test: `bash scripts/health-check.sh`
   - Smoke test: `bash scripts/smoke-test.sh`
   - Walkthrough (non-destructive): `bash scripts/walkthrough.sh`
@@ -52,7 +82,7 @@ Full reset
   - Stop and remove containers/volumes: `docker compose down -v --remove-orphans`
   - Optional prune to reclaim space: `docker system prune -af --volumes`
   - Start DB first: `docker compose up -d db`
-  - Rebuild and start services: `docker compose up -d --build api ai web`
+  - Rebuild and start services: `docker compose up -d --build api ai web ngrok`
 - Shortcut: use `scripts/db-reset.sh` (interactive, destructive) to perform the above.
 
 Re-run a specific migration (optional)
@@ -72,6 +102,13 @@ Notes
 
 ### Redis (optional, recommended)
 Docker includes a `redis` service for rate limiting, caching, and session-like state. Services receive `REDIS_URL=redis://redis:6379`. The API falls back to in-memory if Redis is absent. For production, provision ElastiCache Redis (see `terraform/redis.tf`). A LocalStack service is also included to emulate select AWS services (ECR/IAM/STS) for local tests.
+
+### Email delivery (queued)
+Password reset and other transactional emails are enqueued to a DB outbox and processed by a worker to keep API requests fast and reliable. In local/dev, run the DB outbox worker; in production, enable SQS for decoupled processing.
+
+- Local/dev: run the outbox worker from the API container (see `apps/api/src/workers/outbox-email.ts`).
+- Production (recommended): set `SQS_QUEUE_URL` (and `AWS_REGION`) to publish jobs; deploy the SQS mailer worker (see `apps/api/src/workers/sqs-mailer.ts`, KEDA manifest in `argo/keda-mailer.yaml`).
+- Templates and provider credentials are configured in the app (see sections below).
 
 ## AWS Deployment (Terraform) — EKS + Argo CD
 - See `terraform/` for an EKS + Argo CD blueprint: VPC, EKS (managed node group), ALB + CloudFront + WAF, RDS Postgres (KMS), and ElastiCache Redis.
@@ -158,6 +195,7 @@ Before making changes, read the following:
 
 - `AGENTS.md` — Agent/contributor guide for how to work in this repo (security conventions, migrations, RBAC, UI patterns).
 - `SUMMARY.MD` — The authoritative, always-up-to-date project brief and change log. After any substantive change, append a concise summary of what changed, files touched, endpoints/migrations added, and configuration/secret expectations.
+ - PR Template — A checklist is enforced via `.github/pull_request_template.md`. See `docs/PRE_MERGE_CHECKLIST.md` for a detailed pre‑merge checklist (migrations, API/RBAC, UI patterns, secrets, and keeping Terraform/Helm/K8s up to date when architecture changes).
 
 ## Mobile-Friendly Requirement (Required)
 
@@ -221,7 +259,7 @@ Login (three-tier)
 - API validates `Authorization: Bearer …` and sets `req.auth` with user/org/project context.
 - AI requires the same token; derives org/user from it.
 
-Dev users are seeded from `DEMO_USERS` during migration, and default client `demo` is created.
+Initial users are created when an organization is registered. Use the Register flow (`/register/org`) to create the first org and admin account locally.
 
 Routes:
 - API: `POST /auth/login` → returns `{ token, refresh_token }`
@@ -230,6 +268,8 @@ Routes:
 
 ### Twilio SMS (optional)
 The API can send SMS invitations via Twilio when a contact includes a phone number.
+
+Secrets for providers are stored in the database (encrypted) and managed in the Admin UI at `/admin/secrets`. Environment variables are optional for local development and overrides; production should use DB-backed secrets.
 
 Environment variables:
 - `TWILIO_ACCOUNT_SID` — Your Twilio Account SID (e.g., ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
@@ -241,6 +281,8 @@ With these set, `apps/api/src/sms.ts` will send SMS invites. If unset, the API l
 
 ### SendGrid Email (optional)
 Email sending prefers SendGrid’s API when configured, with SMTP as a fallback.
+
+Secrets for providers are stored in the database (encrypted) and managed in the Admin UI at `/admin/secrets`. Environment variables are optional for local development and overrides; production should use DB-backed secrets.
 
 - API mode (preferred):
   - `SENDGRID_API_KEY` — Your SendGrid API Key
@@ -257,7 +299,7 @@ You can set `SMTP_FROM` or `SENDGRID_FROM` to control the From address.
 Email and SMS message content is stored in the database and can be managed in the web UI at `/admin/templates`.
 
 - Tables: `email_templates` (key, subject, body, optional client_id) and `sms_templates` (key, body, optional client_id).
-- Default templates are seeded for the `invite` key and can be overridden per client.
+- Default templates are seeded for the `invite` and `password_reset` keys and can be overridden per client.
 - Supported variables in templates:
   - `{{url}}` — Acceptance link
   - `{{clientName}}` — Client display name

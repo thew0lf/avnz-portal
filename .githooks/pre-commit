@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-commit] Running lint checks..."
+bash scripts/lint.sh
+echo "[pre-commit] Lint OK"
+

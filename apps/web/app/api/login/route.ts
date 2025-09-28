@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'We couldn’t sign you in with those details. Please check your client code, email or username, and password.' }, { status: 401 })
   }
   const { token, refresh_token, refresh_expires } = await r.json()
-
-  const res = NextResponse.redirect(new URL(nextPath || '/admin', req.url))
+  const wantsJson = (req.headers.get('accept')||'').includes('application/json') || req.headers.get('x-fetch') === '1'
+  const res = wantsJson ? NextResponse.json({ ok:true }) : NextResponse.redirect(new URL(nextPath || '/admin', req.url))
   res.cookies.set(getCookieName(), token, {
     httpOnly: true,
     sameSite: 'lax',

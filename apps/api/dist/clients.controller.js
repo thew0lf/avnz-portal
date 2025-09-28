@@ -337,6 +337,10 @@ let ClientsController = class ClientsController {
             const user = u.rows[0];
             if (!user)
                 throw new BadRequestException('user not found');
+            // Ensure user belongs to this org
+            const mem = await client.query('select 1 from memberships where user_id=$1 and org_id=$2', [user.id, org]);
+            if (!mem.rows[0])
+                throw new BadRequestException('user not in org');
             await client.query('update clients set manager_user_id=$1 where id=$2', [user.id, id]);
             await audit(req, 'update', 'client.manager', id, null, { manager_user_id: user.id });
             return { ok: true };

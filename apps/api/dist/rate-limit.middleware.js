@@ -1,4 +1,24 @@
 const buckets = new Map();
+let redisClient = null;
+const redisUrl = process.env.REDIS_URL || '';
+async function getRedis() {
+    if (!redisUrl)
+        return null;
+    if (redisClient)
+        return redisClient;
+    try {
+        // Dynamically import to keep optional
+        const mod = await import('redis');
+        const client = mod.createClient({ url: redisUrl });
+        client.on('error', () => { });
+        await client.connect();
+        redisClient = client;
+        return client;
+    }
+    catch {
+        return null;
+    }
+}
 function keyFor(req) {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
     const route = req.path.startsWith('/auth/login')
@@ -15,10 +35,28 @@ function limitFor(routeKey) {
         return { windowMs: 60_000, max: 20 };
     return { windowMs: 60_000, max: 120 };
 }
-export function rateLimitMiddleware(req, res, next) {
+export async function rateLimitMiddleware(req, res, next) {
     const k = keyFor(req);
     const { windowMs, max } = limitFor(k);
     const now = Date.now();
+    const redis = await getRedis();
+    if (redis) {
+        const ttlSec = Math.ceil(windowMs / 1000);
+        const key = `rl:${k}`;
+        let count = await redis.incr(key);
+        if (count === 1)
+            await redis.expire(key, ttlSec);
+        const ttl = await redis.ttl(key);
+        res.setHeader('X-RateLimit-Limit', String(max));
+        res.setHeader('X-RateLimit-Remaining', String(Math.max(0, max - count)));
+        res.setHeader('X-RateLimit-Reset', String(Math.floor((now + ttl * 1000) / 1000)));
+        if (count > max) {
+            res.status(429).json({ error: 'rate_limited' });
+            return;
+        }
+        return next();
+    }
+    // Fallback in-memory
     let b = buckets.get(k);
     if (!b || b.resetAt < now) {
         b = { count: 0, resetAt: now + windowMs };

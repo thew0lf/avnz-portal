@@ -5,9 +5,10 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ClientCreateForm from '@/components/admin/forms/ClientCreateForm'
 import { revalidatePath } from 'next/cache'
+import ClientsTable from './ClientsTable'
 
 export default async function ClientsPage({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }) {
   const cookie = cookies().get(getCookieName())
@@ -22,40 +23,32 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
   const res = await apiFetch(`/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
-  const nextOffset = offset + limit
-  const prevOffset = Math.max(0, offset - limit)
+  // Pagination is handled client-side within DataTable for now
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Clients</h1>
-      <ClientCreateForm />
-      <form action="/admin/clients" className="flex gap-2 items-end">
-        <Input name="q" placeholder="Search clients" defaultValue={q} className="w-64" />
-        <Button type="submit">Search</Button>
-      </form>
-      {q && (<div className="mt-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <tr><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Manager</TableHead><TableHead>Created</TableHead><TableHead>Actions</TableHead></tr>
-          </TableHeader>
-          <TableBody>
-            {rows.map((r:any)=>(
-              <TableRow key={r.id}>
-                <TableCell>{r.code}</TableCell>
-                <TableCell>{r.name}</TableCell>
-                <TableCell>{r.manager_email||'-'}</TableCell>
-                <TableCell>{new Date(r.created_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
-                <TableCell><a className="underline" href="/admin/clients/manage">Manage</a></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <div className="flex justify-between items-center mt-3">
-          <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
-          <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
-          <a className="underline" href={`/admin/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
-        </div>
-      </div>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Clients</h1></div>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Create client</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ClientCreateForm />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Find clients</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <form action="/admin/clients" className="flex gap-2 items-end">
+            <Input name="q" placeholder="Search clients" defaultValue={q} className="w-full md:w-64" />
+            <Button type="submit">Search</Button>
+          </form>
+          {q && (<div className="mt-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">All clients</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <ClientsTable rows={rows} />
+        </CardContent>
+      </Card>
     </main>
   )
 }

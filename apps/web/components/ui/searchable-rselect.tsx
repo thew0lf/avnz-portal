@@ -15,10 +15,12 @@ export default function SearchableRSelect({ value, onValueChange, items, placeho
 }) {
   const CLEAR_VALUE = '__none__'
   const [q, setQ] = React.useState('')
+  // Radix Select disallows Item with an empty string value. Filter those out defensively.
+  const safeItems = React.useMemo(() => items.filter(i => String(i.value || '') !== ''), [items])
   const filtered = React.useMemo(() => {
     const needle = q.toLowerCase()
-    return items.filter(i => i.label.toLowerCase().includes(needle))
-  }, [q, items])
+    return safeItems.filter(i => i.label.toLowerCase().includes(needle))
+  }, [q, safeItems])
   const groups = React.useMemo(() => {
     const g: Record<string, SRItem[]> = {}
     for (const item of filtered) {

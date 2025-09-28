@@ -258,7 +258,7 @@ let SpecController = class SpecController {
         c.release();
     } }
     async revokeRole(id) { const c = await pool.connect(); try {
-        await c.query('delete from authz.role_assignments where id=$1', [id]);
+        await c.query('update authz.role_assignments set deleted_at=now() where id=$1', [id]);
         return { ok: true };
     }
     finally {

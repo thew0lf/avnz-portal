@@ -8,6 +8,7 @@ import RoleCreateForm from '@/components/admin/forms/RoleCreateForm'
 import RolePermsForm from '@/components/admin/forms/RolePermsForm'
 import RoleAssignForm from '@/components/admin/forms/RoleAssignForm'
 import { revalidatePath } from 'next/cache'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 async function createRole(formData: FormData) {
   'use server'
@@ -53,26 +54,35 @@ export default async function RolesPage() {
 
   return (
     <main className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Roles & Permissions</h1>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Roles & Permissions</h1></div>
 
-      <RoleCreateForm />
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Create role</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <RoleCreateForm />
+        </CardContent>
+      </Card>
 
       <div className="space-y-4">
         {rolesWithMembers.map((r:any)=>{
           const assigned = new Set<string>((r.permissions||[]) as string[])
           return (
-            <div key={r.id} className="p-3 border rounded-md">
-              <div className="font-medium">{r.name}</div>
-              <div className="text-sm text-muted-foreground mb-2">{r.description||''}</div>
-              <RolePermsForm roleId={r.id} perms={perms} assigned={assigned} />
-              <div className="mt-3">
-                <div className="text-sm font-medium">Members with this role</div>
-                <ul className="list-disc pl-6 text-sm">
-                  {r.members.map((m:any)=>(<li key={m.user_id}>{m.email} {m.username?`(${m.username})`:''}</li>))}
-                </ul>
-                <RoleAssignForm roleId={r.id} />
-              </div>
-            </div>
+            <Card key={r.id}>
+              <CardHeader className="px-4 py-3">
+                <CardTitle className="text-base">{r.name}</CardTitle>
+                <div className="text-sm text-muted-foreground">{r.description||''}</div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <RolePermsForm roleId={r.id} perms={perms} assigned={assigned} />
+                <div className="mt-3">
+                  <div className="text-sm font-medium">Members with this role</div>
+                  <ul className="list-disc pl-6 text-sm">
+                    {r.members.map((m:any)=>(<li key={m.user_id}>{m.email} {m.username?`(${m.username})`:''}</li>))}
+                  </ul>
+                  <RoleAssignForm roleId={r.id} />
+                </div>
+              </CardContent>
+            </Card>
           )
         })}
       </div>

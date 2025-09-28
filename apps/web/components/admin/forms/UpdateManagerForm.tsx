@@ -15,6 +15,11 @@ export default function UpdateManagerForm({ clientId, onSaved }: { clientId: str
   const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const { success, error: toastError } = useToast()
+  const [options, setOptions] = useState<Array<{ id: string; label: string }>>([])
+  async function loadOptions(){
+    if (options.length) return
+    try { const r = await fetch(`/api/memberships?client_id=${encodeURIComponent(clientId)}`); const d = await r.json(); const rows = d?.rows || []; setOptions(rows.map((m:any)=>({ id: m.user_id, label: m.email || m.username || m.user_id }))) } catch {}
+  }
   return (
     <form method="post" className="flex gap-2" onSubmit={handleSubmit(async (values) => {
       setServerError(null)
@@ -26,7 +31,10 @@ export default function UpdateManagerForm({ clientId, onSaved }: { clientId: str
       success('Manager updated')
       onSaved?.()
     })}>
-      <Input {...register('identifier')} placeholder="user@example.com or username" aria-invalid={!!errors.identifier} />
+      <Input list={`users-${clientId}`} onFocus={loadOptions} {...register('identifier')} placeholder="user@example.com or username" aria-invalid={!!errors.identifier} />
+      <datalist id={`users-${clientId}`}>
+        {options.map(o => (<option key={o.id} value={o.label}>{o.label}</option>))}
+      </datalist>
       <Button type="submit" variant="outline" disabled={isSubmitting}>Save</Button>
       {errors.identifier && <div className="text-sm text-red-600">{errors.identifier.message}</div>}
       {serverError && <div className="text-sm text-red-600" role="alert">{serverError}</div>}

@@ -20,5 +20,27 @@
   ],
   "ignorePatterns": [
     "dist/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "apps/web/app/**/page.tsx",
+        "apps/web/app/**/layout.tsx",
+        "apps/web/app/**/loading.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/components/ui/data-table",
+                "message": "Do not import DataTable into server components. Define columns and render within a Client Component wrapper (e.g., *Table.tsx) and use that instead."
+              }
+            ]
+          }
+        ]
+      }
+    }
   ]
 }

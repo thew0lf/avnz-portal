@@ -22,6 +22,10 @@ let RbacGuard = class RbacGuard {
         this.authz = authz;
     }
     async canActivate(context) {
+        // Bootstrap bypass (dev/local)
+        if ((process.env.RBAC_BOOTSTRAP_MODE || '').toLowerCase() === 'true' && (process.env.RBAC_BOOTSTRAP_ALLOW_ALL || '').toLowerCase() === 'true') {
+            return true;
+        }
         const handler = context.getHandler();
         const meta = this.reflector.get(AUTHZ_META_KEY, handler);
         if (!meta)
@@ -30,6 +34,11 @@ let RbacGuard = class RbacGuard {
         const userId = req?.auth?.userId;
         if (!userId)
             throw new ForbiddenException('unauthorized');
+        // Portal Manager bypass: only users with 'portal-manager' get full access
+        const legacyRoles = Array.isArray(req?.auth?.roles) ? req.auth.roles : [];
+        if (legacyRoles.includes('portal-manager')) {
+            return true;
+        }
         const resourceId = req.params?.[meta.resourceParam || 'id'] || req.body?.[meta.resourceParam || 'id'];
         if (!resourceId)
             throw new ForbiddenException('missing resource id');

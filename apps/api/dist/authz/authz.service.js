@@ -11,8 +11,11 @@ import { evalJsonLogic } from './abac.js';
 import { permCache } from './permissions.cache.js';
 let AuthzService = class AuthzService {
     async isAllowed(userId, resourceNodeId, domain, resourceType, actionName, reqAttrs) {
-        // Bootstrap bypass
+        // Bootstrap bypass (dev/local)
         if ((process.env.RBAC_BOOTSTRAP_MODE || '').toLowerCase() === 'true') {
+            const allowAll = (process.env.RBAC_BOOTSTRAP_ALLOW_ALL || '').toLowerCase() === 'true';
+            if (allowAll)
+                return { allowed: true, userLevel: 9999, requiredLevel: 0, abac: { evaluated: false } };
             const ids = String(process.env.RBAC_BOOTSTRAP_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
             if (ids.includes(String(userId)))
                 return { allowed: true, userLevel: 9999, requiredLevel: 0, abac: { evaluated: false } };

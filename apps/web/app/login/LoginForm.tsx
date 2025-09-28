@@ -41,7 +41,7 @@ export default function LoginForm({ defaultValues, nextPath, csrf, flash }: { de
         fd.set('email', values.email)
         fd.set('password', values.password)
         fd.set('next', nextPath)
-        const r = await fetch('/api/login', { method: 'POST', body: fd, credentials: 'same-origin' })
+        const r = await fetch('/api/login', { method: 'POST', body: fd, headers: { 'x-fetch': '1' } })
         if (r.ok) { success('Signed in'); router.push(nextPath || '/admin'); return }
         try { const data = await r.json(); const msg = data?.message || data?.error || 'We couldn’t sign you in. Please check your details and try again.'; setServerError(msg); toastError(msg) } catch { const msg = 'We couldn’t sign you in. Please check your details and try again.'; setServerError(msg); toastError(msg) }
       })}>

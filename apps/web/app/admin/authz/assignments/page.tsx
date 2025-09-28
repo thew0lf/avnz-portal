@@ -18,13 +18,14 @@ async function createAssignment(formData: FormData){ 'use server'
   revalidatePath('/admin/authz/assignments')
 }
 
-export default async function AssignmentsPage({ searchParams }: { searchParams?: { sort?: string, dir?: 'asc'|'desc' } }){
+export default async function AssignmentsPage({ searchParams }: { searchParams?: { sort?: string, dir?: 'asc'|'desc', withDeleted?: string } }){
   const cookie = cookies().get(getCookieName()); const token = cookie?.value||''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/authz/assignments')
   const orgOverride = cookies().get('orgFilter')?.value || ''
   const nodeId = orgOverride || (session as any)?.orgUUID || ''
-  const res = await apiFetch(`/admin/assignments?nodeId=${encodeURIComponent(nodeId)}`)
+  const withDeleted = String(searchParams?.withDeleted||'')
+  const res = await apiFetch(`/admin/assignments?nodeId=${encodeURIComponent(nodeId)}&include_deleted=${encodeURIComponent(withDeleted)}`)
   const data = await res.json().catch(()=>({ rows: [] }))
   const rows = data.rows || []
   const sort = (searchParams?.sort||'').toLowerCase()
@@ -42,6 +43,13 @@ export default async function AssignmentsPage({ searchParams }: { searchParams?:
     <main className="p-6 space-y-4">
       <h1 className="text-xl font-semibold">Role Assignments</h1>
       <AssignmentCreateForm roleOptions={roles} />
+      <div className="text-sm">
+        {withDeleted ? (
+          <a className="underline" href={`/admin/authz/assignments`}>Hide deleted</a>
+        ) : (
+          <a className="underline" href={`/admin/authz/assignments?withDeleted=1`}>Show deleted</a>
+        )}
+      </div>
       <div className="hidden md:block">
       <Table>
         <TableHeader>
@@ -55,10 +63,10 @@ export default async function AssignmentsPage({ searchParams }: { searchParams?:
         <TableBody>
           {(sort? sorted : rows).map((r:any)=>(
             <TableRow key={r.id}>
-              <TableCell>{r.user_id}</TableCell>
+              <TableCell className="flex items-center gap-2">{r.user_id} {r.deleted_at ? <span className="text-xs rounded bg-red-100 text-red-700 px-2 py-0.5">Deleted</span> : null}</TableCell>
               <TableCell>{r.node_id}</TableCell>
               <TableCell>{r.role_id}</TableCell>
-              <TableCell><ActionButton label="Revoke" variant="secondary" method="DELETE" path={`/admin/assignments/${encodeURIComponent(r.id)}`} /></TableCell>
+              <TableCell>{r.deleted_at ? <ActionButton label="Restore" variant="secondary" method="POST" path={`/admin/assignments/${encodeURIComponent(r.id)}/restore`} /> : <ActionButton label="Revoke" variant="secondary" method="DELETE" path={`/admin/assignments/${encodeURIComponent(r.id)}`} />}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -67,9 +75,9 @@ export default async function AssignmentsPage({ searchParams }: { searchParams?:
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((r:any)=>(
           <div key={r.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium">User: {r.user_id}</div>
-            <div className="text-xs text-muted-foreground">Node: {r.node_id} · Role: {r.role_id}</div>
-            <div className="mt-2"><ActionButton label="Revoke" variant="secondary" method="DELETE" path={`/admin/assignments/${encodeURIComponent(r.id)}`} /></div>
+            <div className="text-sm font-medium break-words flex items-center gap-2">User: {r.user_id} {r.deleted_at ? <span className="text-xs rounded bg-red-100 text-red-700 px-2 py-0.5">Deleted</span> : null}</div>
+            <div className="text-xs text-muted-foreground break-words">Node: {r.node_id} · Role: {r.role_id}</div>
+            <div className="mt-2">{r.deleted_at ? <ActionButton label="Restore" variant="secondary" method="POST" path={`/admin/assignments/${encodeURIComponent(r.id)}/restore`} /> : <ActionButton label="Revoke" variant="secondary" method="DELETE" path={`/admin/assignments/${encodeURIComponent(r.id)}`} />}</div>
           </div>
         ))}
       </div>

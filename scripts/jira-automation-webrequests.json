@@ -1,0 +1,72 @@
+{
+  "RuleA_InProgress_Webhook": {
+    "method": "POST",
+    "url": "{NGROK_PUBLIC_URL}/jira/events/{orgCode}",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Jira-Secret": "<your-secret>"
+    },
+    "body": {
+      "event": "jira:issue_updated",
+      "changelog": { "items": [ { "field": "status", "toString": "In Progress" } ] },
+      "issue": {
+        "id": "{{issue.id}}",
+        "key": "{{issue.key}}",
+        "fields": {
+          "summary": "{{issue.summary}}",
+          "description": "{{issue.description}}",
+          "status": { "name": "In Progress" }
+        }
+      },
+      "user": { "displayName": "{{initiator.displayName}}" }
+    }
+  },
+  "RuleA_InProgress_DirectQueue": {
+    "method": "POST",
+    "url": "{NGROK_PUBLIC_URL}/api/agents/jobs",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "task": "[Jira {{issue.key}}] {{issue.summary}}\n\n{{issue.description}}",
+      "meta": { "jira_issue_key": "{{issue.key}}" }
+    }
+  },
+  "RuleB_InReview_QueueQA": {
+    "method": "POST",
+    "url": "{NGROK_PUBLIC_URL}/api/agents/jobs",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "task": "[QA {{issue.key}}] Validate acceptance criteria, generate/verify unit tests, propose edge cases.\n\nSummary: {{issue.summary}}\n\nDescription: {{issue.description}}",
+      "meta": { "jira_issue_key": "{{issue.key}}", "phase": "qa" }
+    }
+  },
+  "RuleC_QATesting_QueueTests": {
+    "method": "POST",
+    "url": "{NGROK_PUBLIC_URL}/api/agents/jobs",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "task": "[TEST {{issue.key}}] Execute/verify tests, summarize failures, propose fixes.\n\nSummary: {{issue.summary}}",
+      "meta": { "jira_issue_key": "{{issue.key}}", "phase": "test" }
+    }
+  },
+  "RuleD_Done_QueueAudit": {
+    "method": "POST",
+    "url": "{NGROK_PUBLIC_URL}/api/agents/jobs",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "task": "[AUDIT {{issue.key}}] Summarize implementation notes, risks, and test coverage; generate release notes.",
+      "meta": { "jira_issue_key": "{{issue.key}}", "phase": "audit" }
+    }
+  },
+  "RuleE_CommentRetest_QueueRetest": {
+    "method": "POST",
+    "url": "{NGROK_PUBLIC_URL}/api/agents/jobs",
+    "headers": { "Content-Type": "application/json" },
+    "body": {
+      "task": "[RETEST {{issue.key}}] Re-run QA validation after changes. Note: {{comment.body}}",
+      "meta": { "jira_issue_key": "{{issue.key}}", "phase": "qa-retest" }
+    }
+  }
+}
+

@@ -10,7 +10,8 @@
     "migrate": "node dist/migrate.js",
     "start": "node dist/main.js",
     "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json}'",
-    "lint": "eslint 'src/**/*.{ts,tsx}'"
+    "lint": "eslint 'src/**/*.{ts,tsx}'",
+    "outbox:once": "ts-node src/workers/outbox-email.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
@@ -20,8 +21,10 @@
     "csv-stringify": "^6.5.1",
     "pg": "^8.11.5",
     "twilio": "^5.3.5",
+    "redis": "^4.6.13",
     "nodemailer": "^6.9.13",
     "@sendgrid/mail": "^7.7.0",
+    "@aws-sdk/client-sqs": "^3.645.0",
     "argon2": "^0.41.1",
     "reflect-metadata": "^0.1.13"
   },

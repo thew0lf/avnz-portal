@@ -28,4 +28,3 @@ export function TableCell({ className = '', ...props }: React.TdHTMLAttributes<H
 export function TableCaption({ className = '', ...props }: React.HTMLAttributes<HTMLTableCaptionElement>) {
   return <caption className={`mt-2 text-xs text-muted-foreground ${className}`} {...props} />
 }
-

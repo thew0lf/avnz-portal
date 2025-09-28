@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mailer-worker
+  namespace: default
+  annotations:
+    eks.amazonaws.com/role-arn: REPLACE_MAILER_IRSA_ROLE_ARN
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailer-worker
+  namespace: default
+spec:
+  replicas: 0
+  selector: { matchLabels: { app: mailer-worker } }
+  template:
+    metadata: { labels: { app: mailer-worker } }
+    spec:
+      serviceAccountName: mailer-worker
+      containers:
+        - name: worker
+          image: REPLACE_API_IMAGE
+          command: ["node", "dist/workers/sqs-mailer.js"]
+          env:
+            - name: SQS_QUEUE_URL
+              value: REPLACE_SQS_QUEUE_URL
+            - name: AWS_REGION
+              value: REPLACE_AWS_REGION
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: AUTH_SECRET
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: mailer-worker-scaler
+  namespace: default
+spec:
+  scaleTargetRef:
+    name: mailer-worker
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  cooldownPeriod: 60
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: REPLACE_SQS_QUEUE_URL
+        awsRegion: REPLACE_AWS_REGION
+        queueLength: "50"

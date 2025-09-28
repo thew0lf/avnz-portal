@@ -1,0 +1,36 @@
+namespace: avnz
+domain: "portal.example.com"
+acmArn: "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+web:
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-web
+    tag: REPLACE_TAG
+  env:
+    NEXT_PUBLIC_API_BASE: "https://portal.example.com"
+    API_BASE: "http://api:3001"
+
+api:
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-api
+    tag: REPLACE_TAG
+
+ai:
+  image:
+    repository: REPLACE_ECR/REPLACE_PROJECT-ai
+    tag: REPLACE_TAG
+
+externalSecrets:
+  enabled: false
+  clusterSecretStoreName: aws-ssm
+  storeKind: ClusterSecretStore
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: /avnzr/db/url
+    - secretKey: AUTH_SECRET
+      remoteRef:
+        key: /avnzr/auth/secret
+    - secretKey: APP_AES_KEY
+      remoteRef:
+        key: /avnzr/app/aes_key

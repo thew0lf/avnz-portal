@@ -17,7 +17,7 @@ export declare class UsageController {
         groupBy: string[];
         rows: any;
     }>;
-    addEvent(req: ReqX, body: any): Promise<{
+    addEvent(req: ReqX, body: any, svcToken?: string): Promise<{
         ok: boolean;
     }>;
 }

@@ -1,0 +1,40 @@
+{{- if eq .Values.exposure.type "ingress" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: avnz-alb
+  namespace: {{ .Values.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.scheme | quote }}
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.acmArn | quote }}
+    {{- if .Values.externalDNS.enabled }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.externalDNS.hostname | quote }}
+    {{- end }}
+spec:
+  rules:
+    - host: {{ .Values.domain | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port: { number: 3001 }
+          - path: /ai
+            pathType: Prefix
+            backend:
+              service:
+                name: ai
+                port: { number: 8000 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port: { number: 3000 }
+{{- end }}

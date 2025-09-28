@@ -1,0 +1,43 @@
+{{- if .Values.mailer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailer-worker
+  namespace: {{ .Values.namespace }}
+  labels: { app: mailer-worker }
+spec:
+  replicas: 0
+  selector:
+    matchLabels: { app: mailer-worker }
+  template:
+    metadata:
+      labels: { app: mailer-worker }
+    spec:
+      serviceAccountName: mailer-worker
+      containers:
+        - name: worker
+          image: "{{ .Values.mailer.image.repository }}:{{ .Values.mailer.image.tag }}"
+          command: ["node", "dist/workers/sqs-mailer.js"]
+          env:
+            - name: SQS_QUEUE_URL
+              value: {{ .Values.mailer.env.SQS_QUEUE_URL | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.mailer.env.AWS_REGION | quote }}
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mailer.secretRef }}
+                  key: AUTH_SECRET
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mailer-worker
+  namespace: {{ .Values.namespace }}
+  annotations:
+    # Set via values or patch via pipeline to IRSA role ARN
+    {{- if .Values.mailer.irsaRoleArn }}
+    eks.amazonaws.com/role-arn: {{ .Values.mailer.irsaRoleArn | quote }}
+    {{- end }}
+{{- end }}
+

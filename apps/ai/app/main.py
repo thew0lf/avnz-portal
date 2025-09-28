@@ -1,6 +1,6 @@
 import hashlib, io, os, uuid, re, json, math, hmac, base64
 from typing import List, Optional, Tuple
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Body
 from pydantic import BaseModel
 import psycopg2, psycopg2.extras
 import tiktoken
@@ -10,6 +10,7 @@ from pptx import Presentation
 from openpyxl import load_workbook
 
 app = FastAPI(title="avnzr-ai")
+import threading
 
 DB_URL = os.environ.get("DATABASE_URL")
 PGSSL = os.environ.get("PGSSL")
@@ -18,6 +19,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_PROJECT = os.environ.get("OPENAI_PROJECT")
 AWS_REGION = os.environ.get("AWS_REGION","us-east-1")
 AUTH_SECRET = os.environ.get("AUTH_SECRET","dev-secret-change-me")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
 def pg():
     sslmode = 'require' if PGSSL else None
@@ -126,6 +128,89 @@ class SearchReq(BaseModel):
 @app.get("/healthz")
 def healthz():
     return {"ok": True, "provider": ("bedrock" if USE_BEDROCK else "openai")}
+
+# --- RPS (CRM/Billing) Routers ---
+try:
+    from .rps.router import router as rps_router  # type: ignore
+    app.include_router(rps_router)
+except Exception:
+    # In minimal environments, rps module may not load; keep app running
+    pass
+
+
+# --- Agents Orchestrator (Queue-backed) ---
+try:
+    from .assistants.jobs import new_job, get_job, list_jobs, cancel_job
+except Exception:
+    new_job = None
+    get_job = None
+    list_jobs = None
+    cancel_job = None
+
+# Start background worker thread in dev/local if available
+try:
+    from .assistants.worker import main as worker_main  # type: ignore
+    if os.getenv("AGENTS_WORKER_AUTO", "1") == "1":
+        threading.Thread(target=worker_main, daemon=True).start()
+except Exception:
+    pass
+
+class AgentJobReq(BaseModel):
+    task: str
+    meta: dict | None = None
+
+@app.post("/agents/jobs")
+def agents_submit(req: AgentJobReq):
+    if not new_job:
+        raise HTTPException(status_code=503, detail="agents not available")
+    if not (OPENAI_API_KEY or os.getenv("ASSISTANTS_MODEL")):
+        # allow submission even if key is absent; worker will fail later if not set
+        pass
+    job_id = new_job(req.task, req.meta or {})
+    return {"job_id": job_id, "status": "queued"}
+
+@app.get("/agents/jobs/{job_id}")
+def agents_get(job_id: str):
+    if not get_job:
+        raise HTTPException(status_code=503, detail="agents not available")
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="not found")
+    return job
+
+@app.get("/agents/jobs")
+def agents_list(limit: int = 50):
+    if not list_jobs:
+        raise HTTPException(status_code=503, detail="agents not available")
+    limit = max(1, min(200, int(limit)))
+    # Include queued plus recent completed
+    rows = []
+    try:
+        rows = list_jobs(limit)
+    except Exception:
+        rows = []
+    try:
+        from .assistants.jobs import list_recent_jobs  # type: ignore
+        recent = list_recent_jobs(limit)
+    except Exception:
+        recent = []
+    # de-dup by id, keep queued first, then recent
+    seen = {r.get("id") for r in rows}
+    for r in recent:
+        if r.get("id") not in seen:
+            rows.append(r)
+    return {"rows": rows[:limit]}
+
+@app.post("/agents/jobs/{job_id}/cancel")
+def agents_cancel(job_id: str):
+    if not cancel_job:
+        raise HTTPException(status_code=503, detail="agents not available")
+    result = cancel_job(job_id)
+    if not result.get("ok"):
+        if result.get("reason") == "not_found":
+            raise HTTPException(status_code=404, detail="not found")
+        raise HTTPException(status_code=400, detail=result)
+    return result
 
 @app.post("/ingest")
 async def ingest(org_id: Optional[str] = Form(None), user_id: Optional[str] = Form(None), plan: str = Form("pro"), project_code: Optional[str] = Form(None), project_id: Optional[str] = Form(None), file: UploadFile = File(...), authorization: Optional[str] = None):

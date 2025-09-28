@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 
 // SPA handled via RoutesUpsertForm and RouteRowEditor
 
-export default async function AuthzRoutes({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc' } }){
+export default async function AuthzRoutes({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc', withDeleted?: string } }){
   const cookie = cookies().get(getCookieName()); const token = cookie?.value||''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/authz/routes')
@@ -22,7 +22,8 @@ export default async function AuthzRoutes({ searchParams }: { searchParams?: { q
   const q = searchParams?.q || ''
   const limit = Number(searchParams?.limit || '20')
   const offset = Number(searchParams?.offset || '0')
-  const res = await apiFetch(`/admin/routes?nodeId=${encodeURIComponent(nodeId)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
+  const withDeleted = String(searchParams?.withDeleted||'')
+  const res = await apiFetch(`/admin/routes?nodeId=${encodeURIComponent(nodeId)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&include_deleted=${encodeURIComponent(withDeleted)}`)
   const data = await res.json().catch(()=>({ rows: [] }))
   const rows = data.rows || []
   const nextOffset = offset + limit
@@ -43,6 +44,13 @@ export default async function AuthzRoutes({ searchParams }: { searchParams?: { q
         <Button type="submit">Search</Button>
       </form>
       <RoutesUpsertForm />
+      <div className="text-sm">
+        {withDeleted ? (
+          <a className="underline" href={`/admin/authz/routes?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`}>Hide deleted</a>
+        ) : (
+          <a className="underline" href={`/admin/authz/routes?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withDeleted=1`}>Show deleted</a>
+        )}
+      </div>
       {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
       <div className="hidden md:block">
       <Table>
@@ -61,7 +69,7 @@ export default async function AuthzRoutes({ searchParams }: { searchParams?: { q
           {(sort? sorted : rows).map((r:any)=>(
             <TableRow key={r.id}>
               <TableCell>{r.method}</TableCell>
-              <TableCell>{r.path}</TableCell>
+              <TableCell className="flex items-center gap-2">{r.path} {r.deleted_at ? <Badge variant="destructive">Deleted</Badge> : null}</TableCell>
               <RouteRowEditor row={r} />
             </TableRow>
           ))}
@@ -71,7 +79,7 @@ export default async function AuthzRoutes({ searchParams }: { searchParams?: { q
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((r:any)=>(
           <div key={r.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium mb-1">{r.method} {r.path}</div>
+            <div className="text-sm font-medium mb-1 break-all flex items-center gap-2">{r.method} {r.path} {r.deleted_at ? <Badge variant="destructive">Deleted</Badge> : null}</div>
             <div className="text-xs text-muted-foreground">{r.domain}.{r.resource_type}.{r.action_name} · param: {r.resource_param||'-'}</div>
             <div className="mt-2">
               <RouteRowEditor row={r} />
@@ -80,9 +88,9 @@ export default async function AuthzRoutes({ searchParams }: { searchParams?: { q
         ))}
       </div>
       <div className="flex justify-between items-center">
-        <a className="underline" href={`/admin/authz/routes?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
+        <a className="underline" href={`/admin/authz/routes?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}${withDeleted?`&withDeleted=1`:''}`}>Prev</a>
         <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
-        <a className="underline" href={`/admin/authz/routes?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
+        <a className="underline" href={`/admin/authz/routes?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}${withDeleted?`&withDeleted=1`:''}`}>Next</a>
       </div>
     </main>
   )

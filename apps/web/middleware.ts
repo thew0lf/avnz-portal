@@ -17,7 +17,7 @@ export function middleware(req: NextRequest) {
   res.headers.set('Permissions-Policy','geolocation=(), microphone=(), camera=()')
   // Basic CSP for web app; relax in dev for Next dev runtime (react-refresh)
   const isProd = process.env.NODE_ENV === 'production'
-  const scriptSrc = ["script-src 'self' 'unsafe-inline'"].concat(isProd ? [] : ["'unsafe-eval'"]).join(' ')
+  const scriptSrc = ["script-src 'self' 'unsafe-inline' https://unpkg.com"].concat(isProd ? [] : ["'unsafe-eval'"]).join(' ')
   const connectSrc = [
     "connect-src 'self' https://api https://ai http://localhost:3001 http://localhost:8000",
   ].concat(isProd ? [] : [
@@ -26,7 +26,7 @@ export function middleware(req: NextRequest) {
   const csp = [
     "default-src 'self'",
     "img-src 'self' data:",
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://unpkg.com",
     scriptSrc,
     connectSrc,
     "frame-ancestors 'none'"

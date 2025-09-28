@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: avnz
+resources:
+  - ../namespace.yaml
+  - ../web/deployment.yaml
+  - ../web/service.yaml
+  - ../api/deployment.yaml
+  - ../api/service.yaml
+  - ../ai/deployment.yaml
+  - ../ai/service.yaml
+  - ../ingress.yaml
