@@ -125,7 +125,10 @@ Helm Chart: Mailer Worker
 
 ## Repo Hygiene (AVNZ-10)
 - Updated `.gitignore` to explicitly ignore nested `apps/*/node_modules`, `.next`, `dist`, `build`, `coverage`, and local markers (e.g., `.away_mode`).
-- Removed accidentally tracked artifacts from Git history on branch `work/design-2/AVNZ-10` using `git filter-branch` (paths purged: `apps/web/node_modules`, `.idea`, `.env`). This resolves GitHub's 100MB file limit error caused by a large Next.js SWC binary.
+- Removed accidentally tracked artifacts from Git history using `git filter-branch`:
+  - Branches cleaned: `work/design-2/AVNZ-10`, `design-2`, `main` (and `origin/main`).
+  - Paths purged across history: `apps/*/node_modules`, `apps/*/.next`, `.idea`, `.env`, plus explicit large files that triggered failures.
+  - Force-pushed rewritten branches; remote now free of >100MB blobs (Next.js SWC) and large Next cache pack files.
 - No application code changes; only VCS hygiene. Local `.env`/IDE files remain untracked. Future commits inherit the stricter ignore rules.
 ## Admin Dashboard
 - Post-org register: redirect to `/admin` (client creation now optional).
