@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Query, Req, BadRequestException, ForbiddenException } from "@nestjs/common";
+import { Controller, Get, Post, Body, Query, Req, Headers, BadRequestException, ForbiddenException } from "@nestjs/common";
 import type { Request } from "express";
 import { pool, getClientForReq } from "./db.js";
+import { unitPrice } from './pricing.util.js'
 type ReqX = Request & { auth?: { userId?: string; orgId?: string; orgUUID?: string; roles?: string[] } };
 function parseDate(s?: string, def?: Date) { if (!s) return def || new Date(Date.now()-7*24*3600*1000); const d=new Date(s); if(isNaN(d.getTime())) throw new BadRequestException("invalid date"); return d; }
 
@@ -83,23 +84,57 @@ export class UsageController {
   }
 
   @Post("events")
-  async addEvent(@Req() req: ReqX, @Body() body: any) {
-    const ctx = req.auth; if (!ctx?.orgId) throw new BadRequestException("org required");
-    const { provider, model, operation, input_tokens=0, output_tokens=0, embed_tokens=0, cost_usd=0, user_id=null, project_id=null, project_code=null } = body||{};
+  async addEvent(@Req() req: ReqX, @Body() body: any, @Headers('x-service-token') svcToken?: string) {
+    const serviceToken = process.env.SERVICE_TOKEN || ''
+    const isService = !!serviceToken && typeof svcToken === 'string' && svcToken === serviceToken
+    const ctx = req.auth
+    if (!isService && !ctx?.orgId) throw new BadRequestException("org required")
+    const { provider, model, operation, input_tokens=0, output_tokens=0, embed_tokens=0, user_id=null, project_id=null, project_code=null, client_id=null, external_id=null, details=null, org_id=null } = body||{};
     if(!provider||!model||!operation) throw new BadRequestException("missing fields");
     const client = await getClientForReq(req as any);
     try {
       let pid: string | null = null;
       if (project_id) { pid = project_id; }
       else if (project_code) {
-        const r = await client.query('select id, client_id from projects where org_id=$1 and code=$2', [ctx.orgUUID || ctx.orgId, project_code]);
+        const orgKey = isService ? (org_id || null) : (ctx.orgUUID || ctx.orgId)
+        if (!orgKey) throw new BadRequestException('org required')
+        const r = await client.query('select id, client_id from projects where org_id=$1 and code=$2', [orgKey, project_code]);
         pid = r.rows[0]?.id || null;
         // If client-scoped user, ensure project is within their client
-        const clientId = (req.auth as any)?.clientId as string | undefined;
-        if (clientId && r.rows[0] && String(r.rows[0].client_id) !== String(clientId)) throw new ForbiddenException('project not in client');
+        if (!isService) {
+          const clientId = (req.auth as any)?.clientId as string | undefined;
+          if (clientId && r.rows[0] && String(r.rows[0].client_id) !== String(clientId)) throw new ForbiddenException('project not in client');
+        }
       }
-      await client.query(`insert into usage_events (org_id, user_id, project_id, provider, model, operation, input_tokens, output_tokens, embed_tokens, cost_usd) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [ctx.orgUUID || ctx.orgId, user_id || ctx.userId || null, pid, provider, model, operation, input_tokens, output_tokens, embed_tokens, cost_usd]);
+      // validate client_id belongs to org if provided
+      let cid: string | null = null
+      if (client_id) {
+        const orgKey = isService ? (org_id || null) : (ctx.orgUUID || ctx.orgId)
+        if (!orgKey) throw new BadRequestException('org required')
+        const r = await client.query('select id from clients where id=$1 and org_id=$2', [client_id, orgKey])
+        cid = r.rows[0]?.id || null
+        if (!cid) throw new BadRequestException('invalid client_id')
+      }
+      // cost computation if missing
+      let cost_usd = Number(body?.cost_usd || 0)
+      if (!cost_usd && (input_tokens || output_tokens || embed_tokens)) {
+        const orgKey = isService ? (org_id || null) : (ctx.orgUUID || ctx.orgId)
+        if (!orgKey) throw new BadRequestException('org required')
+        const roles = (ctx as any)?.roles || []
+        const inP = await unitPrice(provider, model, 'input_tokens', orgKey, user_id || ctx?.userId || undefined, roles)
+        const outP = await unitPrice(provider, model, 'output_tokens', orgKey, user_id || ctx?.userId || undefined, roles)
+        const embP = await unitPrice(provider, model, 'embed_tokens', orgKey, user_id || ctx?.userId || undefined, roles)
+        cost_usd = 0
+        cost_usd += (Number(input_tokens||0) / 1000) * inP
+        cost_usd += (Number(output_tokens||0) / 1000) * outP
+        cost_usd += (Number(embed_tokens||0) / 1000) * embP
+        cost_usd = Number((Math.round(cost_usd * 1e6) / 1e6).toFixed(6))
+      }
+      const orgKey = isService ? (org_id || null) : (ctx.orgUUID || ctx.orgId)
+      if (!orgKey) throw new BadRequestException('org required')
+      await client.query(`insert into usage_events (org_id, user_id, project_id, client_id, provider, model, operation, input_tokens, output_tokens, embed_tokens, cost_usd, external_id, details)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [orgKey, user_id || ctx?.userId || null, pid, cid, provider, model, operation, input_tokens, output_tokens, embed_tokens, cost_usd, external_id, details || null]);
       return { ok: true };
     } finally { client.release(); }
   }

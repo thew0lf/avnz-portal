@@ -1,8 +1,9 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/admin/clients/page": "app/admin/clients/page.js",
-  "/admin/pricing/page": "app/admin/pricing/page.js",
-  "/admin/roles/page": "app/admin/roles/page.js",
-  "/admin/projects/page": "app/admin/projects/page.js",
-  "/admin/project-members/page": "app/admin/project-members/page.js"
+  "/api/usage/timeseries/route": "app/api/usage/timeseries/route.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/api/usage/summary/route": "app/api/usage/summary/route.js",
+  "/api/agents/jobs/route": "app/api/agents/jobs/route.js",
+  "/admin/page": "app/admin/page.js",
+  "/admin/dashboard/tasks/page": "app/admin/dashboard/tasks/page.js"
 }

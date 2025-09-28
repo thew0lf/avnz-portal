@@ -17,6 +17,8 @@ Web (Next.js App Router)
 - [ ] Ensure all admin forms use SPA pattern (React Hook Form + Zod) with toasts on success/error.
 - [ ] Confirm all tables/pages have moved to shadcn primitives for consistency.
 - [ ] Persist and read project/client/user filters via cookies and localStorage as documented.
+- [ ] Replace native title hints with shadcn/ui Tooltip or Popover across Dashboard and Tasks controls (range toggles, series toggles, help). Add accessible labels and keyboard shortcut summaries.
+- [ ] Align Tasks dashboard `/admin/dashboard/tasks` to match `/admin/clients` visual scaffolding (container, cards, headings, DataTable styling, spacing) and responsive behavior.
 
 Templates & Messaging
 - [ ] Validate template rendering variable coverage: `url`, `clientName`, `orgName`, `orgNameSuffix`, `shortCode`.
@@ -33,6 +35,7 @@ Ops (Terraform, Argo, ESO)
 - [ ] Verify CI/CD updates image tags and Argo syncs to cluster.
 - [ ] Add Terraform for SQS queues (main + DLQ) and KEDA ScaledObject; or SQS→Lambda with reserved concurrency and retry policy.
 - [ ] Dashboards/alerts for outbox lag, DLQ count, send failures.
+- [ ] Keep Terraform up to date whenever features change architecture (new services/queues/caches/roles/secrets/DNS); add/update modules and document apply steps.
 
 Security & Compliance
 - [ ] Confirm forgot-password remains non-enumerating and redirects with neutral toast.

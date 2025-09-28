@@ -5,10 +5,10 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn, makeSelectionColumn } from '@/components/ui/data-table'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ClientCreateForm from '@/components/admin/forms/ClientCreateForm'
 import { revalidatePath } from 'next/cache'
+import ClientsTable from './ClientsTable'
 
 export default async function ClientsPage({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }) {
   const cookie = cookies().get(getCookieName())
@@ -23,17 +23,7 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
   const res = await apiFetch(`/clients?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
-  const nextOffset = offset + limit
-  const prevOffset = Math.max(0, offset - limit)
-  const columns: CommonColumn<any>[] = [
-    makeSelectionColumn(),
-    makeDragColumn(),
-    { accessorKey: 'code', header: 'Code', cell: ({ row }) => row.original.code },
-    { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name },
-    { accessorKey: 'manager_email', header: 'Manager', cell: ({ row }) => row.original.manager_email || '-' },
-    { accessorKey: 'created_at', header: 'Created', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone: 'UTC' }) },
-    makeActionsColumn({ viewHref: (r:any)=>'/admin/clients/manage' }),
-  ]
+  // Pagination is handled client-side within DataTable for now
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Clients</h1></div>
@@ -56,7 +46,7 @@ export default async function ClientsPage({ searchParams }: { searchParams?: { q
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All clients</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <DataTable data={rows} columns={columns} enableDnD />
+          <ClientsTable rows={rows} />
         </CardContent>
       </Card>
     </main>

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 
-export default async function AuthzRoles({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc' } }){
+export default async function AuthzRoles({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc', withDeleted?: string } }){
   const cookie = cookies().get(getCookieName()); const token = cookie?.value||''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/authz/roles')
@@ -18,7 +18,8 @@ export default async function AuthzRoles({ searchParams }: { searchParams?: { q?
   const q = searchParams?.q || ''
   const limit = Number(searchParams?.limit || '20')
   const offset = Number(searchParams?.offset || '0')
-  const res = await apiFetch(`/admin/roles?nodeId=${encodeURIComponent(nodeId)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
+  const withDeleted = String(searchParams?.withDeleted||'')
+  const res = await apiFetch(`/admin/roles?nodeId=${encodeURIComponent(nodeId)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&include_deleted=${encodeURIComponent(withDeleted)}`)
   const data = await res.json().catch(()=>({rows:[]})); const rows = data.rows||[]
   const nextOffset = offset + limit
   const prevOffset = Math.max(0, offset - limit)
@@ -37,6 +38,13 @@ export default async function AuthzRoles({ searchParams }: { searchParams?: { q?
         <Input name="q" placeholder="Search name" defaultValue={q} className="w-full md:w-64" />
         <Button type="submit">Search</Button>
       </form>
+      <div className="text-sm">
+        {withDeleted ? (
+          <a className="underline" href={`/admin/authz/roles?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`}>Hide deleted</a>
+        ) : (
+          <a className="underline" href={`/admin/authz/roles?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withDeleted=1`}>Show deleted</a>
+        )}
+      </div>
       <AdminRoleCreateForm />
       {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
       <div className="hidden md:block">
@@ -51,9 +59,9 @@ export default async function AuthzRoles({ searchParams }: { searchParams?: { q?
         <TableBody>
           {(sort? sorted : rows).map((r:any)=>(
             <TableRow key={r.id}>
-              <TableCell>{r.name}</TableCell>
+              <TableCell className="flex items-center gap-2">{r.name} {r.deleted_at ? <Badge variant="destructive">Deleted</Badge> : null}</TableCell>
               <TableCell>{r.level}</TableCell>
-              <TableCell><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/roles/${encodeURIComponent(r.id)}`} /></TableCell>
+              <TableCell>{r.deleted_at ? <ActionButton label="Restore" variant="secondary" method="POST" path={`/admin/roles/${encodeURIComponent(r.id)}/restore`} /> : <ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/roles/${encodeURIComponent(r.id)}`} />}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -62,16 +70,16 @@ export default async function AuthzRoles({ searchParams }: { searchParams?: { q?
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((r:any)=>(
           <div key={r.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium">{r.name}</div>
+            <div className="text-sm font-medium flex items-center gap-2">{r.name} {r.deleted_at ? <Badge variant="destructive">Deleted</Badge> : null}</div>
             <div className="mt-1"><Badge variant="secondary">Level {r.level}</Badge></div>
-            <div className="mt-2"><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/roles/${encodeURIComponent(r.id)}`} /></div>
+            <div className="mt-2">{r.deleted_at ? <ActionButton label="Restore" variant="secondary" method="POST" path={`/admin/roles/${encodeURIComponent(r.id)}/restore`} /> : <ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/roles/${encodeURIComponent(r.id)}`} />}</div>
           </div>
         ))}
       </div>
       <div className="flex justify-between items-center">
-        <a className="underline" href={`/admin/authz/roles?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}`}>Prev</a>
+        <a className="underline" href={`/admin/authz/roles?q=${encodeURIComponent(q)}&limit=${limit}&offset=${prevOffset}${withDeleted?`&withDeleted=1`:''}`}>Prev</a>
         <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
-        <a className="underline" href={`/admin/authz/roles?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}`}>Next</a>
+        <a className="underline" href={`/admin/authz/roles?q=${encodeURIComponent(q)}&limit=${limit}&offset=${nextOffset}${withDeleted?`&withDeleted=1`:''}`}>Next</a>
       </div>
     </main>
   )

@@ -15,6 +15,7 @@ import { pool } from './db.js';
 import { Authz, RbacGuard } from './authz/rbac.guard.js';
 import { audit } from './audit.js';
 import { enc } from './crypto.util.js';
+import { sendRawEmail } from './mailer.js';
 let AdminController = class AdminController {
     // Security settings
     async getSec(_nodeId) { const c = await pool.connect(); try {
@@ -32,18 +33,23 @@ let AdminController = class AdminController {
         c.release();
     } }
     // Route registry CRUD
-    async listRoutes(_nodeId, q, limit, offset) { const c = await pool.connect(); try {
+    async listRoutes(_nodeId, q, limit, offset, includeDeleted) { const c = await pool.connect(); try {
         const lim = Math.max(1, Math.min(200, Number(limit || '20')));
         const off = Math.max(0, Number(offset || '0'));
-        let sql = 'select id,method,path,domain,resource_type,action_name,resource_param from authz.route_registry';
+        let sql = 'select id,method,path,domain,resource_type,action_name,resource_param,deleted_at from authz.route_registry';
         const args = [];
+        const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (q) {
             args.push(`%${q.toLowerCase()}%`);
-            sql += ' where lower(path) like $1';
+            cond.push(`lower(path) like $${args.length}`);
         }
+        if (cond.length)
+            sql += ' where ' + cond.join(' and ');
         sql += ' order by path limit ' + lim + ' offset ' + off;
         const r = await c.query(sql, args);
-        return { rows: r.rows, limit: lim, offset: off, q: q || '' };
+        return { rows: r.rows, limit: lim, offset: off, q: q || '', include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -59,18 +65,28 @@ let AdminController = class AdminController {
     } }
     async deleteRoute(id, _nodeId, req) { const c = await pool.connect(); try {
         const before = (await c.query('select * from authz.route_registry where id=$1', [id])).rows[0];
-        await c.query('delete from authz.route_registry where id=$1', [id]);
+        await c.query('update authz.route_registry set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'authz.route', id, before, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
+    async restoreRoute(id, req) { const c = await pool.connect(); try {
+        await c.query('update authz.route_registry set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'authz.route', id, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
     // Templates CRUD (email/sms)
-    async listEmailTemplates(key, client_id) { const c = await pool.connect(); try {
+    async listEmailTemplates(key, client_id, includeDeleted) { const c = await pool.connect(); try {
         const args = [];
-        let sql = 'select id, key, client_id, subject, body, created_at, updated_at from email_templates';
+        let sql = 'select id, key, client_id, subject, body, body_html, body_mjml, created_at, updated_at, deleted_at from email_templates';
         const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (key) {
             args.push(key);
             cond.push(`key=$${args.length}`);
@@ -83,33 +99,52 @@ let AdminController = class AdminController {
             sql += ' where ' + cond.join(' and ');
         sql += ' order by key, client_id nulls first';
         const r = await c.query(sql, args);
-        return { rows: r.rows };
+        return { rows: r.rows, include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
     } }
-    async upsertEmailTemplate(b, req) { const { id, key, client_id, subject, body } = b || {}; if (!key || !subject || !body)
-        throw new BadRequestException('key, subject, body required'); const c = await pool.connect(); try {
-        const r = await c.query('insert into email_templates(id,key,client_id,subject,body) values (coalesce($1,gen_random_uuid()),$2,$3,$4,$5) on conflict (id) do update set key=excluded.key, client_id=excluded.client_id, subject=excluded.subject, body=excluded.body, updated_at=now() returning id,key,client_id,subject,body', [id || null, key, client_id || null, subject, body]);
+    async upsertEmailTemplate(b, req) { const { id, key, client_id, subject, body, body_html, body_mjml } = b || {}; if (!key || !subject)
+        throw new BadRequestException('key, subject required'); const c = await pool.connect(); try {
+        const r = await c.query('insert into email_templates(id,key,client_id,subject,body,body_html,body_mjml) values (coalesce($1,gen_random_uuid()),$2,$3,$4,$5,$6,$7) on conflict (id) do update set key=excluded.key, client_id=excluded.client_id, subject=excluded.subject, body=excluded.body, body_html=excluded.body_html, body_mjml=excluded.body_mjml, updated_at=now() returning id,key,client_id,subject,body,body_html,body_mjml', [id || null, key, client_id || null, subject, body || null, body_html || null, body_mjml || null]);
         await audit(req, 'upsert', 'template.email', r.rows[0]?.id, null, r.rows[0]);
         return r.rows[0];
     }
     finally {
         c.release();
     } }
+    async previewEmail(b, req) {
+        const { to, subject, body, body_html, client_id } = b || {};
+        if (!to || !subject || (!body && !body_html))
+            throw new BadRequestException('to, subject and body or body_html required');
+        const orgId = req?.auth?.orgId || null;
+        const r = await sendRawEmail(String(to), String(subject), String(body || ''), body_html ? String(body_html) : undefined, { orgId: orgId || undefined, clientId: client_id || undefined });
+        await audit(req, 'send', 'template.email.preview', null, null, { to, subject, from: r?.from });
+        return { ok: true, from: r?.from };
+    }
     async delEmailTemplate(id, req) { const c = await pool.connect(); try {
         const before = (await c.query('select * from email_templates where id=$1', [id])).rows[0];
-        await c.query('delete from email_templates where id=$1', [id]);
+        await c.query('update email_templates set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'template.email', id, before, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
-    async listSmsTemplates(key, client_id) { const c = await pool.connect(); try {
+    async restoreEmailTemplate(id, req) { const c = await pool.connect(); try {
+        await c.query('update email_templates set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'template.email', id, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    async listSmsTemplates(key, client_id, includeDeleted) { const c = await pool.connect(); try {
         const args = [];
-        let sql = 'select id, key, client_id, body, created_at, updated_at from sms_templates';
+        let sql = 'select id, key, client_id, body, created_at, updated_at, deleted_at from sms_templates';
         const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (key) {
             args.push(key);
             cond.push(`key=$${args.length}`);
@@ -122,7 +157,7 @@ let AdminController = class AdminController {
             sql += ' where ' + cond.join(' and ');
         sql += ' order by key, client_id nulls first';
         const r = await c.query(sql, args);
-        return { rows: r.rows };
+        return { rows: r.rows, include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -138,28 +173,41 @@ let AdminController = class AdminController {
     } }
     async delSmsTemplate(id, req) { const c = await pool.connect(); try {
         const before = (await c.query('select * from sms_templates where id=$1', [id])).rows[0];
-        await c.query('delete from sms_templates where id=$1', [id]);
+        await c.query('update sms_templates set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'template.sms', id, before, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
+    async restoreSmsTemplate(id, req) { const c = await pool.connect(); try {
+        await c.query('update sms_templates set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'template.sms', id, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
     // Service configuration (encrypted)
-    async listServiceConfigs(nodeId, service, client_id) { const c = await pool.connect(); try {
+    async listServiceConfigs(nodeId, service, client_id, includeDeleted) { const c = await pool.connect(); try {
         const args = [nodeId || null];
-        let sql = 'select id, org_id, client_id, service, name, created_at, updated_at from service_configs where org_id=$1';
+        let sql = 'select id, org_id, client_id, service, name, created_at, updated_at, deleted_at from service_configs where org_id=$1';
+        const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (service) {
             args.push(service);
-            sql += ' and service=$2';
+            cond.push(`service=$${args.length}`);
         }
         if (client_id) {
             args.push(client_id);
-            sql += service ? ' and client_id=$3' : ' and client_id=$2';
+            cond.push(`client_id=$${args.length}`);
         }
+        if (cond.length)
+            sql += ' and ' + cond.join(' and ');
         sql += ' order by service, name';
         const r = await c.query(sql, args);
-        return { rows: r.rows };
+        return { rows: r.rows, include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -175,8 +223,16 @@ let AdminController = class AdminController {
     } }
     async delServiceConfig(id, req) { const c = await pool.connect(); try {
         const before = (await c.query('select * from service_configs where id=$1', [id])).rows[0];
-        await c.query('delete from service_configs where id=$1', [id]);
+        await c.query('update service_configs set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'service.config', id, before, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    async restoreServiceConfig(id, req) { const c = await pool.connect(); try {
+        await c.query('update service_configs set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'service.config', id, null, null);
         return { ok: true };
     }
     finally {
@@ -198,18 +254,23 @@ let AdminController = class AdminController {
         c.release();
     } }
     // Roles
-    async listRoles(_nodeId, q, limit, offset) { const c = await pool.connect(); try {
+    async listRoles(_nodeId, q, limit, offset, includeDeleted) { const c = await pool.connect(); try {
         const lim = Math.max(1, Math.min(200, Number(limit || '20')));
         const off = Math.max(0, Number(offset || '0'));
-        let sql = 'select id,name,level from authz.roles';
+        let sql = 'select id,name,level,deleted_at from authz.roles';
         const args = [];
+        const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (q) {
             args.push(`%${q.toLowerCase()}%`);
-            sql += ' where lower(name) like $1';
+            cond.push(`lower(name) like $${args.length}`);
         }
+        if (cond.length)
+            sql += ' where ' + cond.join(' and ');
         sql += ' order by level desc limit ' + lim + ' offset ' + off;
         const r = await c.query(sql, args);
-        return { rows: r.rows, limit: lim, offset: off, q: q || '' };
+        return { rows: r.rows, limit: lim, offset: off, q: q || '', include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -238,26 +299,39 @@ let AdminController = class AdminController {
     } }
     async deleteRole(id, _nodeId, req) { const c = await pool.connect(); try {
         const before = (await c.query('select id,name,level from authz.roles where id=$1', [id])).rows[0];
-        await c.query('delete from authz.roles where id=$1', [id]);
+        await c.query('update authz.roles set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'authz.role', id, before, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
+    async restoreRole(id, req) { const c = await pool.connect(); try {
+        await c.query('update authz.roles set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'authz.role', id, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
     // Actions
-    async listActions(_nodeId, q, limit, offset) { const c = await pool.connect(); try {
+    async listActions(_nodeId, q, limit, offset, includeDeleted) { const c = await pool.connect(); try {
         const lim = Math.max(1, Math.min(200, Number(limit || '20')));
         const off = Math.max(0, Number(offset || '0'));
-        let sql = 'select name from authz.actions';
+        let sql = 'select name,deleted_at from authz.actions';
         const args = [];
+        const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (q) {
             args.push(`%${q.toLowerCase()}%`);
-            sql += ' where lower(name) like $1';
+            cond.push(`lower(name) like $${args.length}`);
         }
+        if (cond.length)
+            sql += ' where ' + cond.join(' and ');
         sql += ' order by name asc limit ' + lim + ' offset ' + off;
         const r = await c.query(sql, args);
-        return { rows: r.rows, limit: lim, offset: off, q: q || '' };
+        return { rows: r.rows, limit: lim, offset: off, q: q || '', include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -272,26 +346,39 @@ let AdminController = class AdminController {
         c.release();
     } }
     async deleteAction(name, _nodeId, req) { const c = await pool.connect(); try {
-        await c.query('delete from authz.actions where name=$1', [name]);
+        await c.query('update authz.actions set deleted_at=now() where name=$1', [name]);
         await audit(req, 'delete', 'authz.action', name, null, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
+    async restoreAction(name, req) { const c = await pool.connect(); try {
+        await c.query('update authz.actions set deleted_at=null where name=$1', [name]);
+        await audit(req, 'restore', 'authz.action', name, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
     // Permissions
-    async listPerms(_nodeId, q, limit, offset) { const c = await pool.connect(); try {
+    async listPerms(_nodeId, q, limit, offset, includeDeleted) { const c = await pool.connect(); try {
         const lim = Math.max(1, Math.min(200, Number(limit || '20')));
         const off = Math.max(0, Number(offset || '0'));
-        let sql = 'select id,domain,resource_type,action_name,min_role_id from authz.permissions';
+        let sql = 'select id,domain,resource_type,action_name,min_role_id,deleted_at from authz.permissions';
         const args = [];
+        const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (q) {
             args.push(`%${q.toLowerCase()}%`);
-            sql += " where lower(domain)||'.'||lower(resource_type)||'.'||lower(action_name) like $1";
+            cond.push("lower(domain)||'.'||lower(resource_type)||'.'||lower(action_name) like $" + args.length);
         }
+        if (cond.length)
+            sql += ' where ' + cond.join(' and ');
         sql += ' order by domain,resource_type,action_name limit ' + lim + ' offset ' + off;
         const r = await c.query(sql, args);
-        return { rows: r.rows, limit: lim, offset: off, q: q || '' };
+        return { rows: r.rows, limit: lim, offset: off, q: q || '', include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -321,29 +408,42 @@ let AdminController = class AdminController {
     } }
     async deletePerm(id, _nodeId, req) { const c = await pool.connect(); try {
         const before = (await c.query('select id,domain,resource_type,action_name,min_role_id from authz.permissions where id=$1', [id])).rows[0];
-        await c.query('delete from authz.permissions where id=$1', [id]);
+        await c.query('update authz.permissions set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'authz.permission', id, before, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
+    async restorePerm(id, req) { const c = await pool.connect(); try {
+        await c.query('update authz.permissions set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'authz.permission', id, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
     // Role assignments
-    async listAssignments(userId, nodeId, limit, offset) { const c = await pool.connect(); try {
+    async listAssignments(userId, nodeId, limit, offset, includeDeleted) { const c = await pool.connect(); try {
         const lim = Math.max(1, Math.min(200, Number(limit || '20')));
         const off = Math.max(0, Number(offset || '0'));
-        let where = '';
         const args = [];
+        let where = '';
+        const cond = [];
+        if (!String(includeDeleted || '').match(/^(1|true)$/i))
+            cond.push('deleted_at is null');
         if (userId) {
             args.push(userId);
-            where += ' where user_id=$' + args.length;
+            cond.push(`user_id=$${args.length}`);
         }
         if (nodeId) {
             args.push(nodeId);
-            where += (where ? ' and' : ' where') + ' node_id=$' + args.length;
+            cond.push(`node_id=$${args.length}`);
         }
-        const r = await c.query(`select id,user_id,node_id,role_id,constraints from authz.role_assignments${where} order by user_id,node_id limit ${lim} offset ${off}`, args);
-        return { rows: r.rows, limit: lim, offset: off };
+        if (cond.length)
+            where = ' where ' + cond.join(' and ');
+        const r = await c.query(`select id,user_id,node_id,role_id,constraints,deleted_at from authz.role_assignments${where} order by user_id,node_id limit ${lim} offset ${off}`, args);
+        return { rows: r.rows, limit: lim, offset: off, include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -360,17 +460,26 @@ let AdminController = class AdminController {
     } }
     async deleteAssignment(id, _nodeId, req) { const c = await pool.connect(); try {
         const before = (await c.query('select * from authz.role_assignments where id=$1', [id])).rows[0];
-        await c.query('delete from authz.role_assignments where id=$1', [id]);
+        await c.query('update authz.role_assignments set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'authz.role_assignment', id, before, null);
         return { ok: true };
     }
     finally {
         c.release();
     } }
+    async restoreAssignment(id, req) { const c = await pool.connect(); try {
+        await c.query('update authz.role_assignments set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'authz.role_assignment', id, null, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
     // ABAC fences
-    async listAbac(_nodeId) { const c = await pool.connect(); try {
-        const r = await c.query('select id,action_name,expr from authz.abac_fences order by action_name');
-        return { rows: r.rows };
+    async listAbac(_nodeId, includeDeleted) { const c = await pool.connect(); try {
+        const cond = String(includeDeleted || '').match(/^(1|true)$/i) ? '' : ' where deleted_at is null';
+        const r = await c.query(`select id,action_name,expr,deleted_at from authz.abac_fences${cond} order by action_name`);
+        return { rows: r.rows, include_deleted: !!String(includeDeleted || '').match(/^(1|true)$/i) };
     }
     finally {
         c.release();
@@ -399,8 +508,16 @@ let AdminController = class AdminController {
     } }
     async deleteAbac(id, _nodeId, req) { const c = await pool.connect(); try {
         const before = (await c.query('select * from authz.abac_fences where id=$1', [id])).rows[0];
-        await c.query('delete from authz.abac_fences where id=$1', [id]);
+        await c.query('update authz.abac_fences set deleted_at=now() where id=$1', [id]);
         await audit(req, 'delete', 'authz.abac', id, before, null);
+        return { ok: true };
+    }
+    finally {
+        c.release();
+    } }
+    async restoreAbac(id, req) { const c = await pool.connect(); try {
+        await c.query('update authz.abac_fences set deleted_at=null where id=$1', [id]);
+        await audit(req, 'restore', 'authz.abac', id, null, null);
         return { ok: true };
     }
     finally {
@@ -431,8 +548,9 @@ __decorate([
     __param(1, Query('q')),
     __param(2, Query('limit')),
     __param(3, Query('offset')),
+    __param(4, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listRoutes", null);
 __decorate([
@@ -454,12 +572,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deleteRoute", null);
 __decorate([
+    Post('routes/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreRoute", null);
+__decorate([
     Get('templates/email'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('key')),
     __param(1, Query('client_id')),
+    __param(2, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listEmailTemplates", null);
 __decorate([
@@ -471,6 +598,14 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "upsertEmailTemplate", null);
 __decorate([
+    Post('templates/email/preview'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "previewEmail", null);
+__decorate([
     Delete('templates/email/:id'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Param('id')),
@@ -479,12 +614,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "delEmailTemplate", null);
 __decorate([
+    Post('templates/email/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreEmailTemplate", null);
+__decorate([
     Get('templates/sms'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('key')),
     __param(1, Query('client_id')),
+    __param(2, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listSmsTemplates", null);
 __decorate([
@@ -504,13 +648,22 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "delSmsTemplate", null);
 __decorate([
+    Post('templates/sms/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreSmsTemplate", null);
+__decorate([
     Get('services/configs'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('nodeId')),
     __param(1, Query('service')),
     __param(2, Query('client_id')),
+    __param(3, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listServiceConfigs", null);
 __decorate([
@@ -530,6 +683,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "delServiceConfig", null);
+__decorate([
+    Post('services/configs/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreServiceConfig", null);
 __decorate([
     Get('budget'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
@@ -554,8 +715,9 @@ __decorate([
     __param(1, Query('q')),
     __param(2, Query('limit')),
     __param(3, Query('offset')),
+    __param(4, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listRoles", null);
 __decorate([
@@ -590,14 +752,23 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deleteRole", null);
 __decorate([
+    Post('roles/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreRole", null);
+__decorate([
     Get('actions'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('nodeId')),
     __param(1, Query('q')),
     __param(2, Query('limit')),
     __param(3, Query('offset')),
+    __param(4, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listActions", null);
 __decorate([
@@ -619,14 +790,23 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deleteAction", null);
 __decorate([
+    Post('actions/:name/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('name')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreAction", null);
+__decorate([
     Get('permissions'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('nodeId')),
     __param(1, Query('q')),
     __param(2, Query('limit')),
     __param(3, Query('offset')),
+    __param(4, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listPerms", null);
 __decorate([
@@ -658,14 +838,23 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deletePerm", null);
 __decorate([
+    Post('permissions/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restorePerm", null);
+__decorate([
     Get('assignments'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('userId')),
     __param(1, Query('nodeId')),
     __param(2, Query('limit')),
     __param(3, Query('offset')),
+    __param(4, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listAssignments", null);
 __decorate([
@@ -687,11 +876,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deleteAssignment", null);
 __decorate([
+    Post('assignments/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreAssignment", null);
+__decorate([
     Get('abac'),
     Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
     __param(0, Query('nodeId')),
+    __param(1, Query('include_deleted')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listAbac", null);
 __decorate([
@@ -722,6 +920,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "deleteAbac", null);
+__decorate([
+    Post('abac/:id/restore'),
+    Authz({ action: 'configure', domain: 'node', resourceType: 'org', resourceParam: 'nodeId' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "restoreAbac", null);
 AdminController = __decorate([
     Controller('admin'),
     UseGuards(RbacGuard)

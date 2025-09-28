@@ -16,4 +16,12 @@ export declare class OrgsController {
             name: any;
         };
     }>;
+    update(req: any, body: any): Promise<{
+        ok: boolean;
+    }>;
+    audit(req: any): Promise<{
+        rows: any[];
+        limit: number;
+        offset: number;
+    }>;
 }

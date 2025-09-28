@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import express from 'express'
 import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { UsageController } from "./usage.controller.js";
 import { ComplianceController } from "./compliance.controller.js";
 import { PricingController } from "./pricing.controller.js";
@@ -15,11 +17,15 @@ import { CheckController } from "./authzcheck/check.controller.js";
 import { NodesController } from "./nodes.controller.js";
 import { AdminController } from "./admin.controller.js";
 import { HealthController } from "./health.controller.js";
+import { BillingController } from "./billing.controller.js";
 import { MeController } from "./me.controller.js";
 import { OutboxController } from "./outbox.controller.js";
 import { SpecController } from "./spec.controller.js";
 import { SpecAuthController } from "./spec-auth.controller.js";
+import { SlackController } from "./slack.controller.js";
+import { JiraController } from "./jira.controller.js";
 import { AuthzService } from "./authz/authz.service.js";
+import { RbacGuard } from "./authz/rbac.guard.js";
 import { startRbacNotifyListener } from "./db/notify.js";
 import { startAuditHousekeeping } from "./audit-housekeeping.js";
 import { migrate } from "./migrate.js";
@@ -27,9 +33,27 @@ import { authMiddleware } from "./auth.middleware.js";
 import { rateLimitMiddleware } from "./rate-limit.middleware.js";
 import { securityHeadersMiddleware } from "./security-headers.middleware.js";
 import { routeGuardMiddleware } from "./route-guard.middleware.js";
+import { backfillInProgress } from "./jira-backfill.js";
 
-@Module({ controllers:[HealthController,MeController,UsageController,ComplianceController,PricingController,AuthController,OrgsController,ClientsController,ProjectsController,MembershipsController,RolesController,ProjectMembersController,CheckController,NodesController,AdminController,OutboxController,SpecController,SpecAuthController], providers:[AuthzService] })
+@Module({ controllers:[HealthController,MeController,UsageController,ComplianceController,PricingController,AuthController,OrgsController,ClientsController,ProjectsController,MembershipsController,RolesController,ProjectMembersController,CheckController,NodesController,AdminController,OutboxController,SpecController,SpecAuthController,BillingController,SlackController,JiraController], providers:[AuthzService, RbacGuard, { provide: APP_GUARD, useClass: RbacGuard }] })
 class AppModule implements NestModule { configure(c:MiddlewareConsumer){ c.apply(securityHeadersMiddleware, rateLimitMiddleware, authMiddleware, routeGuardMiddleware).forRoutes("*"); } }
 
-async function bootstrap(){ const app=await NestFactory.create(AppModule,{cors:true}); const port=Number(process.env.PORT||3001); await migrate(); startRbacNotifyListener(); startAuditHousekeeping(); await app.listen(port); console.log("API listening on", port); }
+async function bootstrap(){
+  const app=await NestFactory.create(AppModule,{cors:true});
+  // Capture raw body for signature verification (e.g., Slack)
+  app.use(express.json({ verify: (req:any,_res,buf:Buffer)=>{ req.rawBody = buf } }))
+  app.use(express.urlencoded({ extended: true, verify: (req:any,_res,buf:Buffer)=>{ req.rawBody = buf } }))
+  const port=Number(process.env.PORT||3001);
+  await migrate(); startRbacNotifyListener(); startAuditHousekeeping();
+  await app.listen(port);
+  console.log("API listening on", port);
+  if ((process.env.JIRA_BACKFILL_ON_START||'1') === '1') {
+    backfillInProgress().catch(()=>{})
+  }
+  const iv = Number(process.env.JIRA_BACKFILL_INTERVAL_SEC||'0')
+  if (iv > 0) {
+    setInterval(()=> backfillInProgress().catch(()=>{}), iv*1000)
+    console.log('[jira-backfill] polling enabled every', iv, 'sec')
+  }
+}
 bootstrap();

@@ -10,3 +10,9 @@ export declare function sendPasswordResetEmail(to: string, token: string, option
     clientId?: string;
     orgId?: string;
 }): Promise<void>;
+export declare function sendRawEmail(to: string, subject: string, text: string, html?: string, options?: {
+    orgId?: string;
+    clientId?: string;
+}): Promise<{
+    from: string;
+}>;

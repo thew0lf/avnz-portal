@@ -48,6 +48,17 @@ services:
       PGSSL: ${PGSSL:-}
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      SERVICE_TOKEN: ${SERVICE_TOKEN:-}
+      JIRA_WEBHOOK_SECRET: ${JIRA_WEBHOOK_SECRET:-}
+      JIRA_EMAIL: ${JIRA_EMAIL:-}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN:-}
+      JIRA_DOMAIN: ${JIRA_DOMAIN:-}
+      JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY:-AVNZ}
+      JIRA_DEFAULT_ORG_CODE: ${JIRA_DEFAULT_ORG_CODE:-}
+      JIRA_BACKFILL_ON_START: ${JIRA_BACKFILL_ON_START:-1}
+      JIRA_BACKFILL_INTERVAL_SEC: ${JIRA_BACKFILL_INTERVAL_SEC:-300}
+      RBAC_BOOTSTRAP_MODE: ${RBAC_BOOTSTRAP_MODE:-true}
+      RBAC_BOOTSTRAP_ALLOW_ALL: ${RBAC_BOOTSTRAP_ALLOW_ALL:-true}
     ports: ["3001:3001"]
     volumes:
       - ./apps/api:/app
@@ -73,7 +84,42 @@ services:
     ports: ["8000:8000"]
     volumes:
       - ./apps/ai:/app
+      - ./:/workspace
 
+  aiworker:
+    build: ./apps/ai
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/avnzr_portal}
+      PGSSL: ${PGSSL:-}
+      USE_BEDROCK: ${USE_BEDROCK:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_PROJECT: ${OPENAI_PROJECT:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://api:3001}
+      SERVICE_TOKEN: ${SERVICE_TOKEN:-}
+      WORKSPACE_ROOT: /workspace
+      AUTO_COMMIT: ${AUTO_COMMIT:-0}
+      GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-Avnz Bot}
+      GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-bot@avnz.io}
+      GIT_MAIN_BRANCH: ${GIT_MAIN_BRANCH:-main}
+      GIT_REMOTE_URL: ${GIT_REMOTE_URL:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-}
+      GIT_WORK_BRANCH: ${GIT_WORK_BRANCH:-design-2}
+      JIRA_DOMAIN: ${JIRA_DOMAIN:-}
+      JIRA_EMAIL: ${JIRA_EMAIL:-}
+      JIRA_API_TOKEN: ${JIRA_API_TOKEN:-}
+    command: ["python","-m","app.assistants.worker"]
+    volumes:
+      - ./apps/ai:/app
+      - ./:/workspace
   web:
     build: ./apps/web
     depends_on:
@@ -84,6 +130,7 @@ services:
       NEXT_PUBLIC_AI_BASE: ${NEXT_PUBLIC_AI_BASE:-http://ai:8000}
       API_BASE: ${API_BASE:-http://api:3001}
       AI_BASE: ${AI_BASE:-http://ai:8000}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-}
       NEXT_TELEMETRY_DISABLED: "1"
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
       DEMO_USERS: ${DEMO_USERS:-}
@@ -93,6 +140,24 @@ services:
       - ./apps/web:/app
       - /app/node_modules
     command: sh -lc "npm i && npm run dev"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/login || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  # Optional: ngrok to expose API publicly for Slack Events during local development
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    command: ["http", "--log", "stdout", "api:3001"]
+    # The ngrok local web UI is exposed on 4040; map for quick inspection
+    ports: ["4040:4040"]
 
 volumes:
   dbdata:

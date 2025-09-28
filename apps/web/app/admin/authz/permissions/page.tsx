@@ -20,7 +20,7 @@ async function createPerm(formData: FormData){ 'use server'
   revalidatePath('/admin/authz/permissions')
 }
 
-export default async function AuthzPermissions({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc' } }){
+export default async function AuthzPermissions({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string, sort?: string, dir?: 'asc'|'desc', withDeleted?: string } }){
   const cookie = cookies().get(getCookieName()); const token = cookie?.value||''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/authz/permissions')
@@ -29,7 +29,8 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
   const q = searchParams?.q || ''
   const limit = Number(searchParams?.limit || '20')
   const offset = Number(searchParams?.offset || '0')
-  const res = await apiFetch(`/admin/permissions?nodeId=${encodeURIComponent(nodeId)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
+  const withDeleted = String(searchParams?.withDeleted||'')
+  const res = await apiFetch(`/admin/permissions?nodeId=${encodeURIComponent(nodeId)}&q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&include_deleted=${encodeURIComponent(withDeleted)}`)
   const data = await res.json().catch(()=>({rows:[]})); const rows = data.rows||[]
   const rolesRes = await apiFetch(`/admin/roles?nodeId=${encodeURIComponent(nodeId)}`)
   const roles = (await rolesRes.json().catch(()=>({rows:[]}))).rows||[]
@@ -52,6 +53,13 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
         <Input name="q" placeholder="Search domain.resource.action" defaultValue={q} className="w-full md:w-64" />
         <Button type="submit">Search</Button>
       </form>
+      <div className="text-sm">
+        {withDeleted ? (
+          <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`}>Hide deleted</a>
+        ) : (
+          <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&withDeleted=1`}>Show deleted</a>
+        )}
+      </div>
       {q && (<div className="-mt-2 mb-2"><Badge variant="secondary">Search: {q}</Badge></div>)}
       <div className="hidden md:block">
       <Table>
@@ -67,11 +75,11 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
         <TableBody>
           {(sort? sorted : rows).map((p:any)=>(
             <TableRow key={p.id}>
-              <TableCell>{p.domain}</TableCell>
+              <TableCell className="flex items-center gap-2">{p.domain} {p.deleted_at ? <Badge variant="destructive">Deleted</Badge> : null}</TableCell>
               <TableCell>{p.resource_type}</TableCell>
               <TableCell>{p.action_name}</TableCell>
               <TableCell>{p.min_role_id}</TableCell>
-              <TableCell><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} /></TableCell>
+              <TableCell>{p.deleted_at ? <ActionButton label="Restore" variant="secondary" method="POST" path={`/admin/permissions/${encodeURIComponent(p.id)}/restore`} /> : <ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} />}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -80,16 +88,16 @@ export default async function AuthzPermissions({ searchParams }: { searchParams?
       <div className="md:hidden grid gap-2">
         {(sort? sorted : rows).map((p:any)=>(
           <div key={p.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium break-words">{p.domain}.{p.resource_type}.{p.action_name}</div>
+            <div className="text-sm font-medium break-words flex items-center gap-2">{p.domain}.{p.resource_type}.{p.action_name} {p.deleted_at ? <Badge variant="destructive">Deleted</Badge> : null}</div>
             <div className="mt-1"><Badge variant="outline">Min role: {p.min_role_id}</Badge></div>
-            <div className="mt-2"><ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} /></div>
+            <div className="mt-2">{p.deleted_at ? <ActionButton label="Restore" variant="secondary" method="POST" path={`/admin/permissions/${encodeURIComponent(p.id)}/restore`} /> : <ActionButton label="Delete" variant="secondary" method="DELETE" path={`/admin/permissions/${encodeURIComponent(p.id)}`} />}</div>
           </div>
         ))}
       </div>
       <div className="flex justify-between items-center">
-        <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${Math.max(0, offset - limit)}`}>Prev</a>
+        <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${Math.max(0, offset - limit)}${withDeleted?`&withDeleted=1`:''}`}>Prev</a>
         <span className="text-sm text-muted-foreground">Showing {rows.length} rows</span>
-        <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset + limit}`}>Next</a>
+        <a className="underline" href={`/admin/authz/permissions?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset + limit}${withDeleted?`&withDeleted=1`:''}`}>Next</a>
       </div>
     </main>
   )

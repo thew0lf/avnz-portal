@@ -122,11 +122,12 @@ let AuthController = class AuthController {
          left join permissions p on p.id = rp.permission_id
          where m.user_id=$1 and m.org_id=$2`, [user.id, clientRow.org_id]);
             perms = rp.rows.map((x) => x.key).filter(Boolean);
+            const legacyRoles = [membership.role];
             const token = signToken({
                 userId: String(user.id),
                 email: user.email,
                 orgId: clientRow.client_code, // legacy text id
-                roles: [membership.role],
+                roles: legacyRoles,
                 orgUUID: String(clientRow.org_id),
                 clientCode: String(clientRow.client_code),
                 clientId: String(clientRow.client_id),
@@ -213,7 +214,8 @@ let AuthController = class AuthController {
             if (new Date(row.expires_at).getTime() < Date.now())
                 throw new BadRequestException('refresh token expired');
             await client.query('update refresh_tokens set last_used_at=now() where token_hash=$1', [hash]);
-            const token = signToken({ userId: String(row.user_id), email: row.email, orgId: row.org_id, roles: row.roles || [] }, process.env.AUTH_SECRET || 'dev-secret-change-me');
+            const roles = (row.roles || []);
+            const token = signToken({ userId: String(row.user_id), email: row.email, orgId: row.org_id, roles }, process.env.AUTH_SECRET || 'dev-secret-change-me');
             return { token };
         }
         finally {

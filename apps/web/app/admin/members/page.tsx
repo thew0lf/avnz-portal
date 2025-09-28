@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { DataTable, CommonColumn } from '@/components/ui/data-table'
+import MembersTable from './MembersTable'
 import MembersAddForm from '@/components/admin/forms/MembersAddForm'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import SetMemberRoleForm from '@/components/admin/forms/SetMemberRoleForm'
@@ -22,13 +22,6 @@ export default async function MembersPage() {
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
   const roles = (await rolesRes.json()).rows || []
-  const columns: CommonColumn<any>[] = [
-    { accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email },
-    { accessorKey: 'username', header: 'Username', cell: ({ row }) => row.original.username || '' },
-    { accessorKey: 'role', header: 'Role', cell: ({ row }) => row.original.role },
-    { accessorKey: 'created_at', header: 'Since', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone:'UTC' }) },
-    { id: 'set_role', header: 'Set Role', cell: ({ row }) => (<SetMemberRoleForm identifier={row.original.email} roles={roles} />) },
-  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Members</h1></div>
@@ -41,7 +34,7 @@ export default async function MembersPage() {
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All members</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <DataTable data={rows} columns={columns} />
+          <MembersTable rows={rows} roles={roles} />
         </CardContent>
       </Card>
     </main>

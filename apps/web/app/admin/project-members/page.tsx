@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import ProjectFilter from '@/components/admin/forms/ProjectFilter'
-import { DataTable, CommonColumn } from '@/components/ui/data-table'
+import ProjectMembersTable from './ProjectMembersTable'
 import ProjectMemberAddForm from '@/components/admin/forms/ProjectMemberAddForm'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { revalidatePath } from 'next/cache'
@@ -24,12 +24,6 @@ export default async function ProjectMembersPage({ searchParams }: { searchParam
   const listRes = projectCode ? await apiFetch(`/project-members?projectCode=${encodeURIComponent(projectCode)}`) : null
   const rows: any[] = listRes ? (await listRes.json()).rows || [] : []
 
-  const columns: CommonColumn<any>[] = [
-    { accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email },
-    { accessorKey: 'username', header: 'Username', cell: ({ row }) => row.original.username || '' },
-    { accessorKey: 'role', header: 'Role', cell: ({ row }) => row.original.role },
-    { accessorKey: 'created_at', header: 'Since', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone:'UTC' }) },
-  ]
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Project Members</h1></div>
@@ -52,7 +46,7 @@ export default async function ProjectMembersPage({ searchParams }: { searchParam
         <Card>
           <CardHeader className="px-4 py-3"><CardTitle className="text-base">Members in project</CardTitle></CardHeader>
           <CardContent className="p-4 pt-0">
-            <DataTable data={rows} columns={columns} />
+            <ProjectMembersTable rows={rows} />
           </CardContent>
         </Card>
       )}

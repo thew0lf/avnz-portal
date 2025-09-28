@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
-export default function RouteRowEditor({ row }: { row: { id: string; method: string; path: string; domain: string; resource_type: string; action_name: string; resource_param?: string|null } }){
+export default function RouteRowEditor({ row }: { row: { id: string; method: string; path: string; domain: string; resource_type: string; action_name: string; resource_param?: string|null; deleted_at?: string|null } }){
   const [domain, setDomain] = useState(row.domain)
   const [resource_type, setResourceType] = useState(row.resource_type)
   const [action_name, setActionName] = useState(row.action_name)
@@ -23,6 +23,12 @@ export default function RouteRowEditor({ row }: { row: { id: string; method: str
     if (!r.ok) { try { const d=await r.json(); setErr(d?.error||d?.message||'Delete failed') } catch { setErr('Delete failed') } }
     setSaving(false)
   }
+  async function restore(){
+    setSaving(true); setErr(null)
+    const r = await fetch('/api/admin/proxy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path: `/admin/routes/${encodeURIComponent(row.id)}/restore`, method: 'POST' }) })
+    if (!r.ok) { try { const d=await r.json(); setErr(d?.error||d?.message||'Restore failed') } catch { setErr('Restore failed') } }
+    setSaving(false)
+  }
   return (
     <>
       <td className="py-2 pr-4">
@@ -39,10 +45,13 @@ export default function RouteRowEditor({ row }: { row: { id: string; method: str
       </td>
       <td className="py-2 pr-4 flex gap-2">
         <Button type="button" onClick={update} disabled={saving}>Update</Button>
-        <Button type="button" onClick={del} disabled={saving} variant="secondary">Delete</Button>
+        {row.deleted_at ? (
+          <Button type="button" onClick={restore} disabled={saving} variant="secondary">Restore</Button>
+        ) : (
+          <Button type="button" onClick={del} disabled={saving} variant="secondary">Delete</Button>
+        )}
         {err && <div className="text-sm text-red-600" role="alert">{err}</div>}
       </td>
     </>
   )
 }
-

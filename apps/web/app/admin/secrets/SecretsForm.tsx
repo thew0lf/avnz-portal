@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import SearchableRSelect from '@/components/ui/searchable-rselect'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ActionButton } from '@/components/admin/ActionButton'
 
 export default function SecretsForm({ clients, configs, nodeId }: any){
   const { success, error } = useToast()
@@ -47,15 +48,23 @@ export default function SecretsForm({ clients, configs, nodeId }: any){
               <TableHead>Name</TableHead>
               <TableHead>Client</TableHead>
               <TableHead>Updated</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {configs.map((c:any)=>(
               <TableRow key={c.id}>
-                <TableCell>{c.service}</TableCell>
+                <TableCell className="flex items-center gap-2">{c.service} {c.deleted_at ? <span className="text-xs rounded bg-red-100 text-red-700 px-2 py-0.5">Deleted</span> : null}</TableCell>
                 <TableCell>{c.name}</TableCell>
                 <TableCell>{c.client_id || 'Org default'}</TableCell>
                 <TableCell>{new Date(c.updated_at).toLocaleString('en-US',{ timeZone:'UTC' })}</TableCell>
+                <TableCell>
+                  {c.deleted_at ? (
+                    <ActionButton variant="secondary" label="Restore" method="POST" path={`/admin/services/configs/${encodeURIComponent(c.id)}/restore`} />
+                  ) : (
+                    <ActionButton variant="secondary" label="Delete" method="DELETE" path={`/admin/services/configs/${encodeURIComponent(c.id)}`} />
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -64,13 +73,19 @@ export default function SecretsForm({ clients, configs, nodeId }: any){
       <div className="md:hidden grid gap-2">
         {configs.map((c:any)=>(
           <div key={c.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium">{c.service} · {c.name}</div>
+            <div className="text-sm font-medium flex items-center gap-2">{c.service} · {c.name} {c.deleted_at ? <span className="text-xs rounded bg-red-100 text-red-700 px-2 py-0.5">Deleted</span> : null}</div>
             <div className="text-xs text-muted-foreground">Client: {c.client_id || 'Org default'}</div>
             <div className="text-xs">Updated: {new Date(c.updated_at).toLocaleString('en-US',{ timeZone:'UTC' })}</div>
+            <div className="mt-2">
+              {c.deleted_at ? (
+                <ActionButton variant="secondary" label="Restore" method="POST" path={`/admin/services/configs/${encodeURIComponent(c.id)}/restore`} />
+              ) : (
+                <ActionButton variant="secondary" label="Delete" method="DELETE" path={`/admin/services/configs/${encodeURIComponent(c.id)}`} />
+              )}
+            </div>
           </div>
         ))}
       </div>
     </div>
   )
 }
-

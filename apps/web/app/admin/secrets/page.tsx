@@ -7,22 +7,32 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 // Client form is split into its own file (SecretsForm) and imported above.
 
-export default async function SecretsPage(){
+export default async function SecretsPage({ searchParams }: { searchParams?: { withDeleted?: string } }){
   const cookie = cookies().get(getCookieName())
   const token = cookie?.value || ''
   const session = token ? verifyToken(token, process.env.AUTH_SECRET || 'dev-secret-change-me') : null
   if (!session) redirect('/login?next=/admin/secrets')
   const orgOverride = cookies().get('orgFilter')?.value || ''
   const nodeId = orgOverride || (session as any)?.orgUUID || ''
+  const withDeleted = String(searchParams?.withDeleted||'')
   const [clientsRes, confRes] = await Promise.all([
     apiFetch('/clients'),
-    apiFetch('/admin/services/configs?nodeId='+encodeURIComponent(nodeId)),
+    apiFetch('/admin/services/configs?nodeId='+encodeURIComponent(nodeId)+`&include_deleted=${encodeURIComponent(withDeleted)}`),
   ])
   const clients = (await clientsRes.json().catch(()=>({ rows: [] }))).rows||[]
   const configs = (await confRes.json().catch(()=>({ rows: [] }))).rows||[]
   return (
     <main className="p-6 space-y-6">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Service Secrets</h1></div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Service Secrets</h1>
+        <div className="text-sm">
+          {withDeleted ? (
+            <a className="underline" href={`/admin/secrets`}>Hide deleted</a>
+          ) : (
+            <a className="underline" href={`/admin/secrets?withDeleted=1`}>Show deleted</a>
+          )}
+        </div>
+      </div>
       <Card>
         <CardHeader className="px-4 py-3">
           <CardTitle className="text-base">Manage provider secrets</CardTitle>

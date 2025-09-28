@@ -20,7 +20,7 @@ let NodesController = class NodesController {
     async get(id) {
         const c = await pool.connect();
         try {
-            const r = await c.query('select id,type,slug,name,parent_id,path::text as path,attrs from authz.nodes where id=$1', [id]);
+            const r = await c.query('select id,type,slug,name,parent_id,path::text as path,attrs from authz.nodes where id=$1 and deleted_at is null', [id]);
             const row = r.rows[0];
             if (!row)
                 throw new BadRequestException('not found');
@@ -33,7 +33,7 @@ let NodesController = class NodesController {
     async children(id) {
         const c = await pool.connect();
         try {
-            const r = await c.query('select id,type,slug,name,parent_id,path::text as path,attrs from authz.nodes where parent_id=$1 order by slug asc', [id]);
+            const r = await c.query('select id,type,slug,name,parent_id,path::text as path,attrs from authz.nodes where parent_id=$1 and deleted_at is null order by slug asc', [id]);
             return { rows: r.rows };
         }
         finally {
@@ -88,7 +88,7 @@ let NodesController = class NodesController {
         const c = await pool.connect();
         try {
             const before = (await c.query('select id,type,slug,name,parent_id,path::text as path,attrs from authz.nodes where id=$1', [id])).rows[0];
-            const r = await c.query('delete from authz.nodes where id=$1 returning id', [id]);
+            const r = await c.query('update authz.nodes set deleted_at=now() where id=$1 returning id', [id]);
             if (!r.rows[0])
                 throw new BadRequestException('not found');
             await audit(req, 'delete', 'authz.node', id, before, null);

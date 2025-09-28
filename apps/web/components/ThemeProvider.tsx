@@ -5,7 +5,8 @@ type ThemeMode = 'light'|'dark'|'system'
 type ColorScheme = 'default'|'red'|'rose'|'orange'|'green'|'blue'|'yellow'|'violet'
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }){
-  const [theme, setTheme] = useState<ThemeMode>('system')
+  // Default to light for first-time visitors
+  const [theme, setTheme] = useState<ThemeMode>('light')
   const [scheme, setScheme] = useState<ColorScheme>('default')
   useEffect(()=>{
     try {
@@ -24,4 +25,3 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   },[theme, scheme])
   return <>{children}</>
 }
-
