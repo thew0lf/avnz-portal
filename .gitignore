@@ -104,6 +104,16 @@ docker-data/
 *.orig
 *.rej
 *.tmp
+
+# Monorepo safety (explicit nested ignores)
+apps/*/node_modules/
+apps/*/.next/
+apps/*/dist/
+apps/*/build/
+apps/*/coverage/
+
+# Local agent/runtime markers
+.away_mode
 # Created by https://www.toptal.com/developers/gitignore/api/node,phpstorm,pycharm,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=node,phpstorm,pycharm,python
 
