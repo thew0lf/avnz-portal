@@ -61,9 +61,13 @@ Start-of-session checklist (Codex/agents)
 
 Note: Brave Mode is the default in this repo. Agents run the above Docker and script commands automatically without asking. Destructive actions (like volume prune) are still called out explicitly unless the user has already consented within the session.
 
-Git hooks (optional)
-- You can enable the included pre-commit hook to run lint automatically before commits:
+Git hooks (optional but recommended)
+- Enable repo hooks once per clone:
   - `git config core.hooksPath .githooks`
+- What they do:
+  - `pre-commit`: runs lint; blocks committing `node_modules/`, `.next/`, and files > 50MB.
+  - `pre-push`: blocks pushing if `HEAD` contains `node_modules/`, `.next/`, or files > 50MB.
+  - These guardrails reinforce `.gitignore` and GitHub’s 100MB limit.
 
 ## Pre‑push Requirements
 - You must run and pass all checks locally before pushing:
