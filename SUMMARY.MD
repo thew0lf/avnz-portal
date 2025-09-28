@@ -199,6 +199,19 @@ Update 2025-09-17 (Docs)
 Update 2025-09-19 (Docs)
 - README: Quick start mentions the Onboarding wizard after org registration; added a short "Email delivery (queued)" section noting DB outbox and optional SQS worker.
 
+Update 2025-09-28 (Git workflow)
+- Worker PR base: default PR base branch set to `design-2` via new env `GIT_PR_BASE` (worker uses this when opening PRs). Code: `apps/ai/app/assistants/worker.py`.
+- Branch namespace: standardized to `work/design-2/<EPIC>/<TICKET>` (avoids branch-vs-directory collision with `design-2`). Env: `GIT_NS_PREFIX=work`, `GIT_WORK_BRANCH=design-2`.
+- Compose: added `GIT_PR_BASE` env to `aiworker` service in `docker-compose.yml`.
+- Docs updated: `README.md` (Branching & PRs), `JIRA.md` (namespace + env), this `SUMMARY.MD` entry.
+- Env expectations: set in `.env` or compose
+  - `AUTO_COMMIT=1`
+  - `GIT_REMOTE_URL=https://$GITHUB_TOKEN@github.com/thew0lf/avnz-portal.git`
+  - `GITHUB_REPO=thew0lf/avnz-portal`
+  - `GIT_PR_BASE=design-2`
+  - `GIT_WORK_BRANCH=design-2`, `GIT_NS_PREFIX=work`
+  - restart worker: `docker compose up -d --build aiworker`
+
 Update 2025-09-27 (Web)
 - Fixed server-side fetch on RPS dashboard pages failing with "Failed to parse URL from /api/..." by constructing absolute URLs using request headers.
 - Added helper `apps/web/lib/url.ts` exporting `absoluteUrl(path)`.

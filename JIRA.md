@@ -470,13 +470,17 @@ Assignment guardrails (Required)
 
 ### Branching & Merge Policy (Required)
 - Branches:
-  - Controlled by env `GIT_WORK_BRANCH` (default `design-2`).
-  - Epic branch: `<GIT_WORK_BRANCH>/<EPIC_KEY>` (e.g., `design-2/AVNZ-10`).
-  - Child ticket branch: `<GIT_WORK_BRANCH>/<EPIC_KEY>/<TICKET_KEY>` (e.g., `design-2/AVNZ-10/AVNZ-12`).
+- Branch namespace is hierarchical to avoid collisions with `design-2` directory:
+  - Namespace: `<GIT_NS_PREFIX>/<GIT_WORK_BRANCH>/<EPIC_KEY>[/<TICKET_KEY>]`.
+  - Defaults: `GIT_NS_PREFIX=work`, `GIT_WORK_BRANCH=design-2`.
+  - Examples: `work/design-2/AVNZ-10`, `work/design-2/AVNZ-10/AVNZ-12`.
 - Bot behavior:
   - Bots write code to the local repo; when enabled, they commit on the ticket branch and open a PR.
   - QA bots validate (health/smoke/tests) and post results to Jira. Require passing checks/labels before merge.
 - Merge order:
   - Merge child ticket branches into the epic branch after QA approval and docs.
   - When all children complete under an epic, merge the epic branch into `design2`.
-- Configure env for auto‑commit/PR on aiworker: `AUTO_COMMIT=1`, `GIT_REMOTE_URL`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GIT_MAIN_BRANCH`.
+- Configure env for auto‑commit/PR on aiworker: `AUTO_COMMIT=1`, `GIT_REMOTE_URL`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GIT_MAIN_BRANCH`, `GIT_PR_BASE`, `GIT_NS_PREFIX`, `GIT_WORK_BRANCH`.
+
+PR Base
+- All PRs open against `design-2` by default. Set `GIT_PR_BASE` to override (default `design-2`).

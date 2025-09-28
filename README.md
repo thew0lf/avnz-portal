@@ -197,6 +197,23 @@ Before making changes, read the following:
 - `SUMMARY.MD` — The authoritative, always-up-to-date project brief and change log. After any substantive change, append a concise summary of what changed, files touched, endpoints/migrations added, and configuration/secret expectations.
  - PR Template — A checklist is enforced via `.github/pull_request_template.md`. See `docs/PRE_MERGE_CHECKLIST.md` for a detailed pre‑merge checklist (migrations, API/RBAC, UI patterns, secrets, and keeping Terraform/Helm/K8s up to date when architecture changes).
 
+### Branching & PRs
+- Namespace: `<GIT_NS_PREFIX>/<GIT_WORK_BRANCH>/<EPIC_KEY>[/<TICKET_KEY>]`.
+  - Defaults: `GIT_NS_PREFIX=work`, `GIT_WORK_BRANCH=design-2`.
+  - Examples: `work/design-2/AVNZ-10`, `work/design-2/AVNZ-10/AVNZ-12`.
+- PR base: `GIT_PR_BASE` (default `design-2`). All PRs open against `design-2` by default.
+- Auto-commit/PR (aiworker): set `AUTO_COMMIT=1`, `GIT_REMOTE_URL`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GIT_MAIN_BRANCH`, `GIT_PR_BASE`, `GIT_NS_PREFIX`, `GIT_WORK_BRANCH`.
+
+Quick sync and push (HTTPS):
+```bash
+git remote set-url origin https://github.com/thew0lf/avnz-portal.git
+git checkout -B work/design-2/AVNZ-10
+git add -A && git commit -m "AVNZ-10: sync outstanding changes"
+git push -u origin work/design-2/AVNZ-10
+# optional child branches
+for k in AVNZ-11 AVNZ-12 AVNZ-13; do git branch -f work/design-2/AVNZ-10/$k HEAD && git push -u origin work/design-2/AVNZ-10/$k --force-with-lease; done
+```
+
 ## Mobile-Friendly Requirement (Required)
 
 All pages must be mobile friendly. Follow these instructions:

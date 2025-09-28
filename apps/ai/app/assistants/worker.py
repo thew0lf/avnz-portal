@@ -105,15 +105,19 @@ def main():
                             return issue
 
                         epic_key = resolve_epic_key(issue_key)
-                        # Branch naming scheme: <work-branch>/<EPIC>[/<TICKET>]
+                        # Branch naming scheme: <ns>/<work-branch>/<EPIC>[/<TICKET>]
                         work_prefix = os.getenv("GIT_WORK_BRANCH", "design-2").strip() or "design-2"
+                        ns_prefix = os.getenv("GIT_NS_PREFIX", "work").strip() or "work"
+                        base = f"{ns_prefix}/{work_prefix}"
                         if issue_key == epic_key:
-                            branch = f"{work_prefix}/{epic_key}"
+                            branch = f"{base}/{epic_key}"
                         else:
-                            branch = f"{work_prefix}/{epic_key}/{issue_key}"
+                            branch = f"{base}/{epic_key}/{issue_key}"
                         author = os.getenv("GIT_AUTHOR_NAME", "Avnz Bot")
                         email = os.getenv("GIT_AUTHOR_EMAIL", "bot@avnz.io")
                         main_branch = os.getenv("GIT_MAIN_BRANCH", "main")
+                        # PR base branch: default to design-2 (configurable via GIT_PR_BASE)
+                        pr_base = os.getenv("GIT_PR_BASE", work_prefix or "design-2").strip() or "design-2"
 
                         def run(cmd: str, cwd: str):
                             p = subprocess.run(shlex.split(cmd), cwd=cwd, capture_output=True, text=True)
@@ -126,11 +130,38 @@ def main():
                             raise RuntimeError("workspace is not a git repository")
                         run(f"git config user.name {shlex.quote(author)}", git_root)
                         run(f"git config user.email {shlex.quote(email)}", git_root)
+                        # SSH setup if needed (SSH_PRIVATE_KEY or SSH_PRIVATE_KEY_B64)
+                        try:
+                            use_ssh = remote.startswith('git@') or os.getenv('SSH_PRIVATE_KEY') or os.getenv('SSH_PRIVATE_KEY_B64')
+                            if use_ssh:
+                                ssh_dir = os.path.expanduser('~/.ssh')
+                                pathlib.Path(ssh_dir).mkdir(parents=True, exist_ok=True)
+                                key_path = os.path.join(ssh_dir, 'id_ed25519')
+                                pk = os.getenv('SSH_PRIVATE_KEY', '')
+                                pk_b64 = os.getenv('SSH_PRIVATE_KEY_B64', '')
+                                if (not pk) and pk_b64:
+                                    import base64
+                                    try:
+                                        pk = base64.b64decode(pk_b64).decode('utf-8')
+                                    except Exception:
+                                        pk = ''
+                                if pk:
+                                    with open(key_path, 'w', encoding='utf-8') as kf:
+                                        kf.write(pk.strip() + "\n")
+                                    os.chmod(key_path, 0o600)
+                                # add github known_hosts and set GIT_SSH_COMMAND
+                                subprocess.run(['ssh-keyscan','-t','rsa','github.com'], stdout=open(os.path.join(ssh_dir,'known_hosts'),'a'), stderr=subprocess.DEVNULL)
+                                os.environ['GIT_SSH_COMMAND'] = f"ssh -i {key_path} -o StrictHostKeyChecking=no"
+                        except Exception:
+                            pass
+
                         # create branch
                         run(f"git checkout -B {shlex.quote(branch)}", git_root)
                         run("git add -A", git_root)
                         msg = f"{issue_key}: automate changes\n\n{(out.get('plan') if isinstance(out, dict) else '')}"
-                        run(f"git commit -m {shlex.quote(msg)}", git_root)
+                        allow_empty = os.getenv("GIT_ALLOW_EMPTY", "0") == "1"
+                        commit_cmd = f"git commit {'--allow-empty ' if allow_empty else ''}-m {shlex.quote(msg)}"
+                        run(commit_cmd, git_root)
 
                         # basic tests (best-effort) incl. lint if available
                         t_out = []
@@ -161,12 +192,8 @@ def main():
                                 import requests
                                 title = msg.split("\n",1)[0] or (meta.get("jira_issue_key") or branch)
                                 # derive epic branch as base if child branch
-                                base_branch = main_branch
-                                if "/" in branch:
-                                    parts = branch.split("/")
-                                    # work_prefix/EPIC[/TICKET]
-                                    if len(parts) >= 2:
-                                        base_branch = f"{parts[0]}/{parts[1]}"
+                                # Always open PRs against configured PR base (default: design-2)
+                                base_branch = pr_base
                                 payload = {"title": title, "head": branch, "base": base_branch, "body": out.get("implementation") if isinstance(out, dict) else ""}
                                 r = requests.post(f"https://api.github.com/repos/{repo}/pulls", json=payload, headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"}, timeout=10)
                                 if isinstance(out, dict): out["pull_request"] = r.json()
