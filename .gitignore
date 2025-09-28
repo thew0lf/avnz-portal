@@ -74,6 +74,9 @@ coverage/
 .next/cache/
 out/
 .vercel/
+# Also ignore nested Next.js build dirs in monorepo
+**/.next/
+**/.next/cache/
 
 # Turbo / Build caches
 .turbo/

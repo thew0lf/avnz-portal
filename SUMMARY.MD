@@ -212,6 +212,10 @@ Update 2025-09-28 (Git workflow)
   - `GIT_WORK_BRANCH=design-2`, `GIT_NS_PREFIX=work`
   - restart worker: `docker compose up -d --build aiworker`
 
+Update 2025-09-28 (Repo hygiene)
+- Stop tracking Next.js build artifacts under `apps/web/.next`; added recursive ignore for monorepo (`**/.next/`, `**/.next/cache/`).
+- Files touched: `.gitignore`; removed tracked `.next` files from history on branch `work/design-2/AVNZ-10`.
+
 Update 2025-09-27 (Web)
 - Fixed server-side fetch on RPS dashboard pages failing with "Failed to parse URL from /api/..." by constructing absolute URLs using request headers.
 - Added helper `apps/web/lib/url.ts` exporting `absoluteUrl(path)`.
