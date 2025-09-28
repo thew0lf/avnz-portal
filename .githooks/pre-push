@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Guard: block pushing disallowed paths and very large files (>50MB)
+echo "[pre-push] Running repo hygiene checks..."
+
+MAX_BYTES=$((50 * 1024 * 1024))
+
+# Fail if any tracked file lives under node_modules or .next
+if git ls-files | grep -E '(^|/)node_modules/|(^|/)\.next/' >/dev/null 2>&1; then
+  echo "[pre-push] ERROR: Tracked files under node_modules/ or .next/ detected. Commit was likely misconfigured."
+  echo "Please remove them from git and ensure .gitignore is applied."
+  exit 1
+fi
+
+# Fail if any file in HEAD exceeds 50MB
+large_files=$(git ls-tree -r -l HEAD | awk -v max="$MAX_BYTES" '$4 ~ /^-/ && $3 ~ /^[0-9]+$/ { if ($3 > max) print $4" ("$3" bytes)" }')
+if [ -n "$large_files" ]; then
+  echo "[pre-push] ERROR: Large files (>50MB) present in commit tree:"
+  echo "$large_files"
+  echo "Use Git LFS or remove these files from history before pushing."
+  exit 1
+fi
+
+echo "[pre-push] Hygiene checks passed."
+

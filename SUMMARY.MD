@@ -130,6 +130,10 @@ Helm Chart: Mailer Worker
   - Paths purged across history: `apps/*/node_modules`, `apps/*/.next`, `.idea`, `.env`, plus explicit large files that triggered failures.
   - Force-pushed rewritten branches; remote now free of >100MB blobs (Next.js SWC) and large Next cache pack files.
 - No application code changes; only VCS hygiene. Local `.env`/IDE files remain untracked. Future commits inherit the stricter ignore rules.
+ - Added hooks:
+   - `pre-commit` blocks committing `node_modules/`, `.next/` and files > 50MB, and runs lint.
+   - `pre-push` blocks pushing if `HEAD` contains disallowed paths or files > 50MB.
+   - Enable with: `git config core.hooksPath .githooks`.
 ## Admin Dashboard
 - Post-org register: redirect to `/admin` (client creation now optional).
 - First-run CTA: “Create your first client” when none exist.
