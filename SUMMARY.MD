@@ -123,6 +123,10 @@ Helm Chart: Mailer Worker
 - Usage events: email/sms sends add a row to `usage_events` with `embed_tokens=1000` so per-send cost equals price_per_1k; cost_usd computed via pricing rules.
 - `/usage/summary` groups by provider/model/operation with filters (from, to, user, project, projectCode) and validates permissions.
 
+## Repo Hygiene (AVNZ-10)
+- Updated `.gitignore` to explicitly ignore nested `apps/*/node_modules`, `.next`, `dist`, `build`, `coverage`, and local markers (e.g., `.away_mode`).
+- Removed accidentally tracked artifacts from Git history on branch `work/design-2/AVNZ-10` using `git filter-branch` (paths purged: `apps/web/node_modules`, `.idea`, `.env`). This resolves GitHub's 100MB file limit error caused by a large Next.js SWC binary.
+- No application code changes; only VCS hygiene. Local `.env`/IDE files remain untracked. Future commits inherit the stricter ignore rules.
 ## Admin Dashboard
 - Post-org register: redirect to `/admin` (client creation now optional).
 - First-run CTA: “Create your first client” when none exist.
