@@ -1,0 +1,112 @@
+ Approach (Phased)
+
+  - Discovery: inventory RPS modules, dependencies, I/O contracts, data stores, side effects.
+  - Domain model: map Mongo ODM docs → Pydantic/SQLAlchemy (or Motor) + schema/migrations and compatibility
+  adapters.
+  - Services: re-implement business logic (orders, products, customers, transactions, promos, affiliates,
+  tracking) as testable services.
+  - Routers: expose FastAPI endpoints with JWT/RBAC, idempotency, background jobs (email/SMS/webhooks).
+  - Integrations: replace Zend/Doctrine utilities (crypto, mail, queue, cache) with Python SDKs and Redis/
+  SQS.
+  - Observability: structured logging, metrics, tracing; uniform errors and rate limiting.
+  - Migration: ETL/backfill plan, dual-read/dual-write (if required), shadow tests, staged cutover.
+  - Hardening: load tests, production toggles, rollback plan; docs and runbooks.
+
+  Inputs Needed
+
+  - Priority matrix (must‑have vs later) across modules/endpoints.
+  - Current data sources (Mongo/SQL), connection details, sample datasets.
+  - Third‑party integrations in use (payments, fulfillment, email/SMS), credentials in a safe channel.
+  - Auth/RBAC requirements and org/client scoping rules.
+  - Non-functional targets (latency, throughput, SLOs).
+
+  Deliverables
+
+  - Python package (routers + services + adapters) with pyproject, CI, and OpenAPI docs.
+  - Migrations (SQL or collection initializers) and ETL scripts.
+  - Test suite (unit + integration) and seed fixtures.
+  - Deployment manifests (Dockerfile, compose/k8s) and ops docs.
+
+  Timeline (indicative)
+
+  - Week 1: Discovery, architecture, schema draft, skeleton package, CI.
+  - Weeks 2–3: Orders/Customers/Transactions: services + routers + tests; initial ETL.
+  - Weeks 4–5: Remaining modules (products, promos, affiliates, tracking), integrations, background workers.
+  - Week 6: Full migration tests, performance tuning, docs, staged cutover.
+  - Adjust up/down based on breadth and integration count.
+
+  Risks/Assumptions
+
+  - Data model impedance (Mongo embeds → relational) may require JSON columns or interim adapters.
+  - Hidden coupling in vendor utilities; prioritize contract tests and feature flags.
+  - Payment/fulfillment integrations may need sandbox accounts for test parity.
+
+  Next Step
+
+  - I’ll start with a short discovery pass (inventory + ADR) and propose the target schema and first
+  milestone (Orders + Customers). Share the RPS priority list and environment details, and I’ll kick off
+  with a concrete execution plan and timeline you can approve.
+
+Option A — From the portal (recommended)
+
+  - Open: http://localhost:3000/admin/dashboard/tasks
+  - In “Describe a task…”, paste your task:
+      - Example:
+      - Title: “Port external/crm-portal/vendor/RPS to FastAPI”
+      - Body: include your phased approach and deliverables text (the content you pasted)
+  - Click Queue. The job will appear in the table. Status progresses from queued → running → done.
+  - Click the job to view details (plan, implementation, review). Token usage is summarized above and per
+  job.
+  - Context attribution (for billing/usage):
+      - Set the top header filters first:
+      - Org (via Admin header dropdown)
+      - Clients (set clientFilter)
+      - Projects (set projectCode)
+  - These are passed with the job so completion usage is attributed to org/client/project.
+
+  Option B — Via API
+
+  - Submit a job with explicit context:
+      - curl -sX POST 'http://localhost:8000/agents/jobs' \
+      -H 'content-type: application/json' \
+      -d '{
+        "task": "Port external/crm-portal/vendor/RPS to FastAPI. [include phases/deliverables here]",
+        "meta": {
+          "org_id": "<org_uuid>",
+          "client_id": "<client_uuid>",
+          "project_code": "<project_code>"
+        }
+      }'
+  - Check status/result:
+      - curl -s http://localhost:8000/agents/jobs/JOB_ID
+  - The worker posts a completion usage event to API (/usage/events) with tokens and context using
+  SERVICE_TOKEN. You’ll see entries in usage_events with operation=agents.jobs.complete.
+
+  Recommended flow for this multi-week effort
+
+  - Break the project into smaller, trackable tasks (one per milestone) and queue them separately. Examples:
+      - “Discovery: inventory RPS modules, dependencies, I/O contracts; produce ADR with target
+  architecture.”
+      - “Domain model: map Mongo ODM docs to SQLAlchemy/Pydantic + migration plan.”
+      - “Routers/Services: implement Orders/Customers/Transactions (read-only), CI + OpenAPI.”
+      - “Integrations: replace Zend email/SMS/queue/cache with SendGrid/Twilio/Redis adapters.”
+      - “Migration plan: ETL/backfill, shadow tests, rollout strategy.”
+  - Each job yields plan/implementation/review text you can copy into ADRs or tickets.
+  - Re-queue refinement jobs as you accept or adjust plans.
+
+  Monitoring and billing
+
+  - Tasks dashboard shows per-status counters and a tokens chart; main Dashboard now shows cost and tokens
+  with quick range toggles.
+  - usage_events records input/output/embed tokens and cost_usd (computed from pricing rules) for completion
+  events. With the sidebar context set (org/client/project), attribution is automatic.
+
+  Tips
+
+  - Use concise, actionable prompts per job (scope 1 milestone at a time).
+  - Include “Inputs Needed” in the task so the planner asks for missing pieces.
+  - For follow-ups, pass links to prior job outputs or attach summaries so the assistant builds on context.
+
+  If you want, I can queue the first “Discovery” task for you now through the API proxy in the portal and
+  confirm attribution is set to your org/client/project.
+

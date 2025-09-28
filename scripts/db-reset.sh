@@ -15,7 +15,6 @@ echo "Starting db..."
 docker compose up -d db
 
 echo "Rebuilding and starting services (api, ai, web) to run migrations and reseed..."
-docker compose up -d --build api ai web
+docker compose up -d --build api ai web ngrok
 
 echo "Done. Check logs with: docker compose logs -f api"
-

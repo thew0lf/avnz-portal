@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useLocalStorage } from './useLocalStorage'
 import { Input } from '@/components/ui/input'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { PanelLeft, ChevronLeft, ChevronRight, Grid2X2, Users, ShoppingCart, Shield, Key, BarChart3, Percent } from 'lucide-react'
 
 type SectionProps = {
   title: string
@@ -101,6 +103,12 @@ const Icons = {
       <path d="M3 3v18h18"/><path d="M7 13l3 3 7-7"/>
     </svg>
   ),
+  tasks: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/>
+    </svg>
+  ),
   shield: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -126,6 +134,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [roles, setRoles] = useLocalStorage<string>('roles', 'org')
   const [projectCode, setProjectCode] = useLocalStorage<string>('projectCode', '')
   const [projects, setProjects] = useState<any[]>([])
+  const [collapsed, setCollapsed] = useLocalStorage<string>('admin.sidebar.collapsed','0')
   // Avoid SSR/CSR mismatches: render after mount so localStorage-backed values don't differ
   useState(() => { /* noop to ensure hook order */ })
   useEffect(() => { setMounted(true) }, [])
@@ -133,16 +142,87 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     try { const r = await fetch('/api/projects/mine'); const d = await r.json(); setProjects(d.rows||[]) } catch {}
   }
   const canAdmin = roles.split(',').map((s) => s.trim()).includes('org')
+  const isCollapsed = String(collapsed) === '1'
+  useSidebarToggle(setCollapsed, isCollapsed)
   return (
-    <div className="grid md:grid-cols-[280px_1fr] min-h-screen">
-      <aside className="hidden md:flex md:flex-col border-r p-4 space-y-3 bg-white min-h-screen sticky top-0">
-        <div className="flex items-center gap-2">
+    <div className="grid min-h-screen" style={{ gridTemplateColumns: isCollapsed? '64px 1fr' : '280px 1fr' }}>
+      <aside className={`hidden md:flex md:flex-col border-r ${isCollapsed? 'items-center p-2 gap-3' : 'p-4 space-y-3'} bg-white min-h-screen sticky top-0`}>
+        <div className={`${isCollapsed? 'hidden' : 'flex'} items-center gap-2`}>
           {Icons.dashboard}
           <h2 className="text-lg font-semibold">Admin Portal</h2>
         </div>
-        <nav className="grid gap-2">
-          <Section title="Overview" icon={Icons.dashboard}>
-            <MenuLink href="/admin">Dashboard</MenuLink>
+        {isCollapsed ? (
+          <TooltipProvider>
+            <nav className="flex flex-col items-center gap-3 text-slate-700">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin" className="p-2 hover:bg-slate-100 rounded" aria-label="Dashboard">{Icons.dashboard}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Dashboard</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/dashboard/tasks" className="p-2 hover:bg-slate-100 rounded" aria-label="Tasks">{Icons.tasks}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Tasks</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/clients" className="p-2 hover:bg-slate-100 rounded" aria-label="Tenants">{Icons.tenants}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Tenants</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/projects" className="p-2 hover:bg-slate-100 rounded" aria-label="Projects">{Icons.projects}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Projects</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/dashboard/billing/orders" className="p-2 hover:bg-slate-100 rounded" aria-label="Billing">{Icons.billing}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Billing</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/members" className="p-2 hover:bg-slate-100 rounded" aria-label="Access Control">{Icons.members}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Access Control</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/usage" className="p-2 hover:bg-slate-100 rounded" aria-label="Usage">{Icons.usage}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Usage</TooltipContent>
+              </Tooltip>
+              <div className="h-px bg-gray-200 w-8 my-2" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/templates" className="p-2 hover:bg-slate-100 rounded" aria-label="Templates">{Icons.docs}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Templates</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/admin/security" className="p-2 hover:bg-slate-100 rounded" aria-label="Security">{Icons.shield}</Link>
+                </TooltipTrigger>
+                <TooltipContent>Security</TooltipContent>
+              </Tooltip>
+            </nav>
+          </TooltipProvider>
+        ) : (
+          <nav className="grid gap-2">
+          {canAdmin && (
+            <Section title="Org Management" icon={Icons.tenants}>
+              <MenuLink href="/admin/organization">Organization</MenuLink>
+            </Section>
+          )}
+          <Section title="Dashboard" icon={Icons.dashboard}>
+            <MenuLink href="/admin">Portal</MenuLink>
+            <MenuLink href="/admin/dashboard/slack">Slack</MenuLink>
+            <MenuLink href="/admin/dashboard/tasks"><span className="inline-flex items-center gap-1"><span aria-hidden>{Icons.tasks}</span><span>Tasks</span></span></MenuLink>
+            <MenuLink href="/admin/dashboard/jira">Jira</MenuLink>
           </Section>
           <Section title="Tenants" icon={Icons.tenants}>
             <MenuLink href="/admin/clients">Clients</MenuLink>
@@ -153,6 +233,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <MenuLink href="/admin/project-members">Project Members</MenuLink>
             <MenuLink href="/admin/documents">Documents</MenuLink>
             <MenuLink href="/admin/search">Search</MenuLink>
+          </Section>
+          <Section title="Billing" icon={Icons.billing}>
+            <MenuLink href="/admin/dashboard/billing/reports">Reports</MenuLink>
+            <MenuLink href="/admin/dashboard/billing/orders">Orders</MenuLink>
+            <MenuLink href="/admin/dashboard/billing/customers">Customers</MenuLink>
+            <MenuLink href="/admin/dashboard/billing/transactions">Transactions</MenuLink>
+            <MenuLink href="/admin/dashboard/billing/cart">Carts</MenuLink>
+            <MenuLink href="/admin/dashboard/billing/tax-rates">Tax Rates</MenuLink>
+          </Section>
+          <Section title="RPS (FastAPI)" icon={Icons.billing}>
+            <MenuLink href="/admin/dashboard/rps">Overview</MenuLink>
+            <MenuLink href="/admin/dashboard/rps/orders">Orders</MenuLink>
+            <MenuLink href="/admin/dashboard/rps/customers">Customers</MenuLink>
+            <MenuLink href="/admin/dashboard/rps/transactions">Transactions</MenuLink>
           </Section>
           <Section title="Access Control" icon={Icons.members}>
             <MenuLink href="/admin/members">Members</MenuLink>
@@ -188,6 +282,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </Section>
         </nav>
+        )}
         <div className="mt-auto pt-4 border-t">
           <div className="grid gap-2">
             <form action="/api/logout" method="post">
@@ -198,82 +293,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
       <main className="container py-4 md:py-6" suppressHydrationWarning>
         <div className="flex items-center justify-between mb-4">
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger className="touchable border rounded px-2 bg-white">Menu</SheetTrigger>
-              <SheetContent side="left">
-                <SheetHeader>
-                  <SheetTitle>Navigation</SheetTitle>
-                </SheetHeader>
-                <div className="p-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    {Icons.dashboard}
-                    <h2 className="text-lg font-semibold">Admin Portal</h2>
-                  </div>
-                  <Accordion type="multiple" className="w-full">
-                    <AccordionItem value="overview">
-                      <AccordionTrigger>Overview</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin">Dashboard</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="tenants">
-                      <AccordionTrigger>Tenants</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin/clients">Clients</MenuLink>
-                        <MenuLink href="/admin/clients/manage">Manage Client Managers</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="projects">
-                      <AccordionTrigger>Projects</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin/projects">Projects</MenuLink>
-                        <MenuLink href="/admin/project-members">Project Members</MenuLink>
-                        <MenuLink href="/admin/documents">Documents</MenuLink>
-                        <MenuLink href="/admin/search">Search</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="access">
-                      <AccordionTrigger>Access Control</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin/members">Members</MenuLink>
-                        <MenuLink href="/admin/roles">Roles &amp; Permissions</MenuLink>
-                        <MenuLink href="/admin/invites">Invites</MenuLink>
-                        <MenuLink href="/admin/authz/roles">AuthZ Roles</MenuLink>
-                        <MenuLink href="/admin/authz/actions">AuthZ Actions</MenuLink>
-                        <MenuLink href="/admin/authz/permissions">AuthZ Permissions</MenuLink>
-                        <MenuLink href="/admin/authz/nodes">AuthZ Nodes</MenuLink>
-                        <MenuLink href="/admin/authz/routes">AuthZ Routes</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="security">
-                      <AccordionTrigger>Security</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin/security">Security Settings</MenuLink>
-                        <MenuLink href="/admin/secrets">Service Secrets</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="billing">
-                      <AccordionTrigger>Billing & Analytics</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin/pricing">Pricing Rules</MenuLink>
-                        <MenuLink href="/admin/pricing/test">Pricing Simulator</MenuLink>
-                        <MenuLink href="/admin/usage">Usage</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="governance">
-                      <AccordionTrigger>Governance</AccordionTrigger>
-                      <AccordionContent>
-                        <MenuLink href="/admin/compliance">Compliance</MenuLink>
-                        <MenuLink href="/admin/templates">Templates</MenuLink>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                  <div className="pt-2"><SheetClose className="touchable border rounded px-2 w-full">Close</SheetClose></div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
           <div className="flex flex-wrap min-w-0 items-center gap-3 text-sm text-muted-foreground">
             {mounted && (
               <Dropdown label="Org" storageKey="orgFilter" placeholder="All Orgs" showSelection={false} buttonText="Org" optionsProvider={async()=>{ try{ const r=await fetch('/api/orgs'); const d=await r.json(); return [{id:'',name:'All Orgs'}, ...((d.rows||[]).map((o:any)=>({ id:o.id, name:o.name })))] } catch { return [{id:'',name:'All Orgs'}] } }} />
@@ -294,9 +313,117 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         {mounted ? children : null}
+        {/* Global admin nav Sheet controlled via top header icon */}
+        <AdminNavSheet />
       </main>
     </div>
   )
+}
+
+function AdminNavSheet(){
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    function onOpen(){ setOpen(true) }
+    window.addEventListener('admin-nav:open', onOpen)
+    return () => window.removeEventListener('admin-nav:open', onOpen)
+  }, [])
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent side="left">
+        <SheetHeader>
+          <SheetTitle>Navigation</SheetTitle>
+        </SheetHeader>
+        <div className="p-2">
+          <div className="flex items-center gap-2 mb-2">
+            {Icons.dashboard}
+            <h2 className="text-lg font-semibold">Admin Portal</h2>
+          </div>
+          <Accordion type="multiple" className="w-full">
+            <AccordionItem value="overview">
+              <AccordionTrigger>Dashboard</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin">Portal</MenuLink>
+                <MenuLink href="/admin/dashboard/tasks"><span className="inline-flex items-center gap-1"><span aria-hidden>{Icons.tasks}</span><span>Tasks</span></span></MenuLink>
+                <MenuLink href="/admin/dashboard/jira">Jira</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="tenants">
+              <AccordionTrigger>Tenants</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/clients">Clients</MenuLink>
+                <MenuLink href="/admin/clients/manage">Manage Client Managers</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="projects">
+              <AccordionTrigger>Projects</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/projects">Projects</MenuLink>
+                <MenuLink href="/admin/project-members">Project Members</MenuLink>
+                <MenuLink href="/admin/documents">Documents</MenuLink>
+                <MenuLink href="/admin/search">Search</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="billing-menu">
+              <AccordionTrigger>Billing</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/dashboard/billing/reports">Reports</MenuLink>
+                <MenuLink href="/admin/dashboard/billing/orders">Orders</MenuLink>
+                <MenuLink href="/admin/dashboard/billing/customers">Customers</MenuLink>
+                <MenuLink href="/admin/dashboard/billing/transactions">Transactions</MenuLink>
+                <MenuLink href="/admin/dashboard/billing/cart">Carts</MenuLink>
+                <MenuLink href="/admin/dashboard/billing/tax-rates">Tax Rates</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="access">
+              <AccordionTrigger>Access Control</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/members">Members</MenuLink>
+                <MenuLink href="/admin/roles">Roles &amp; Permissions</MenuLink>
+                <MenuLink href="/admin/invites">Invites</MenuLink>
+                <MenuLink href="/admin/authz/roles">AuthZ Roles</MenuLink>
+                <MenuLink href="/admin/authz/actions">AuthZ Actions</MenuLink>
+                <MenuLink href="/admin/authz/permissions">AuthZ Permissions</MenuLink>
+                <MenuLink href="/admin/authz/nodes">AuthZ Nodes</MenuLink>
+                <MenuLink href="/admin/authz/routes">AuthZ Routes</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="security">
+              <AccordionTrigger>Security</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/security">Security Settings</MenuLink>
+                <MenuLink href="/admin/secrets">Service Secrets</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="billing">
+              <AccordionTrigger>Billing & Analytics</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/pricing">Pricing Rules</MenuLink>
+                <MenuLink href="/admin/pricing/test">Pricing Simulator</MenuLink>
+                <MenuLink href="/admin/usage">Usage</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="governance">
+              <AccordionTrigger>Governance</AccordionTrigger>
+              <AccordionContent>
+                <MenuLink href="/admin/compliance">Compliance</MenuLink>
+                <MenuLink href="/admin/templates">Templates</MenuLink>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <div className="pt-2"><SheetClose className="touchable border rounded px-2 w-full">Close</SheetClose></div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// Listen for global top-header sidebar toggle and update local collapsed state
+function useSidebarToggle(setCollapsed: (v: string)=>void, isCollapsed: boolean){
+  useEffect(()=>{
+    function onToggle(){ try{ setCollapsed(isCollapsed? '0':'1') }catch{} }
+    window.addEventListener('admin-sidebar:toggle', onToggle)
+    return () => window.removeEventListener('admin-sidebar:toggle', onToggle)
+  }, [setCollapsed, isCollapsed])
 }
 
 function ProjectDropdown({ projectCode, setProjectCode, loadProjects, projects }: any){

@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { getCookieName, verifyToken } from '@/lib/auth'
 import { serverApiBase } from '@/lib/api'
 
-const ALLOWED_PREFIX = /^(\/admin|\/projects|\/clients|\/roles|\/memberships|\/nodes|\/project-members|\/pricing)/
+const ALLOWED_PREFIX = /^(\/admin|\/projects|\/clients|\/roles|\/memberships|\/nodes|\/project-members|\/pricing|\/jira)/
 const ALLOWED_METHODS = new Set(['POST', 'PATCH', 'DELETE'])
 
 export async function POST(req: NextRequest) {

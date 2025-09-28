@@ -4,9 +4,11 @@ import { cookies } from 'next/headers'
 import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiBase } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import HeaderUserMenu from '@/components/header/HeaderUserMenu'
 import NextTopLoader from 'nextjs-toploader'
 import AppProviders from '@/components/AppProviders'
 import PwaRegister from '@/components/PwaRegister'
+// Render a static button in header and attach behavior via client bridge to avoid dev HMR issues
 
 async function LogoutButton() {
   async function action() {
@@ -48,15 +50,35 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <NextTopLoader color="#0ea5e9" initialPosition={0.2} crawlSpeed={150} height={3} crawl={true} showSpinner={false} easing="ease" speed={200} shadow="0 0 10px #0ea5e9, 0 0 5px #0ea5e9" />
         <header className="border-b sa-top">
           <div className="container flex h-14 items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                id="admin-sidebar-toggle"
+                aria-label="Toggle sidebar"
+                title="Toggle sidebar"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md border bg-white text-gray-700 hidden"
+                type="button"
+              >
+                {/* Inline chevrons icon */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
               <Link href="/" className="font-semibold">{portalName}</Link>
             </div>
             <div className="flex items-center gap-3 text-sm">
-              {session ? (<LogoutButton />) : (<Link href="/login">Sign in</Link>)}
+              {session ? (
+                <HeaderUserMenu
+                  email={session.email}
+                  name={/* best-effort from profile */ (await (async()=>{try{const r=await fetch(`${apiBase()}/me/profile`,{cache:'no-store',headers:{authorization:`Bearer ${cookie?.value||''}`}}); const j=await r.json().catch(()=>({})); const p=j?.profile; const n=[p?.first_name,p?.last_name].filter(Boolean).join(' ').trim(); return n||null}catch{return null}})())}
+                />
+              ) : (
+                <Link href="/login">Sign in</Link>
+              )}
             </div>
           </div>
         </header>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <script suppressHydrationWarning dangerouslySetInnerHTML={{__html: `(()=>{try{var btn=document.getElementById('admin-sidebar-toggle');if(!btn)return;function t(){if(!btn)return;var isAdmin=(location.pathname||'').startsWith('/admin');btn.classList.toggle('hidden',!isAdmin);}t();window.addEventListener('popstate',t);btn.addEventListener('click',function(){try{window.dispatchEvent(new CustomEvent('admin-sidebar:toggle'))}catch{}})}catch{}})();`}} />
+          {children}
+        </AppProviders>
         {/* PWA registration */}
         <PwaRegister />
         <footer className="sa-bottom" />

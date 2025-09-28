@@ -151,5 +151,5 @@ export class SpecController {
   @Post('roles/assign')
   async assignRole(@Body() body:any){ const { userId, nodeId, roleId } = body||{}; if(!userId||!nodeId||!roleId) throw new BadRequestException('missing'); const c=await pool.connect(); try{ const r=await c.query('insert into authz.role_assignments(id,user_id,node_id,role_id) values (gen_random_uuid(),$1,$2,$3) returning id',[userId,nodeId,roleId]); return r.rows[0] } finally{ c.release() } }
   @Post('roles/assign/:id/delete')
-  async revokeRole(@Param('id') id:string){ const c=await pool.connect(); try{ await c.query('delete from authz.role_assignments where id=$1',[id]); return { ok:true } } finally{ c.release() } }
+  async revokeRole(@Param('id') id:string){ const c=await pool.connect(); try{ await c.query('update authz.role_assignments set deleted_at=now() where id=$1',[id]); return { ok:true } } finally{ c.release() } }
 }

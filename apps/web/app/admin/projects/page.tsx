@@ -4,10 +4,10 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { DataTable, CommonColumn, makeActionsColumn, makeDragColumn, makeSelectionColumn } from '@/components/ui/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import ProjectCreateForm from '@/components/admin/forms/ProjectCreateForm'
+import ProjectsTable from './ProjectsTable'
 
 export default async function ProjectsPage({ searchParams }: { searchParams?: { q?: string, offset?: string, limit?: string } }) {
   const cookie = cookies().get(getCookieName())
@@ -22,17 +22,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams?: { 
   const res = await apiFetch(`/projects?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`)
   const data = await res.json().catch(() => ({ rows: [] }))
   const rows = data.rows || []
-  const nextOffset = offset + limit
-  const prevOffset = Math.max(0, offset - limit)
-  const columns: CommonColumn<any>[] = [
-    makeSelectionColumn(),
-    makeDragColumn(),
-    { accessorKey: 'code', header: 'Code', cell: ({ row }) => row.original.code || '' },
-    { accessorKey: 'name', header: 'Name', cell: ({ row }) => row.original.name },
-    { accessorKey: 'client_code', header: 'Client', cell: ({ row }) => row.original.client_code || '' },
-    { accessorKey: 'created_at', header: 'Created', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { timeZone: 'UTC' }) },
-    makeActionsColumn({ viewHref: (r:any)=>`/admin/projects` }),
-  ]
+  // Pagination is handled client-side within DataTable for now
   return (
     <main className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -57,7 +47,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams?: { 
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">All projects</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0">
-          <DataTable data={rows} columns={columns} enableDnD />
+          <ProjectsTable rows={rows} />
         </CardContent>
       </Card>
     </main>

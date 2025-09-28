@@ -7,8 +7,10 @@ import { permCache } from './permissions.cache.js'
 @Injectable()
 export class AuthzService {
   async isAllowed(userId: string, resourceNodeId: string, domain: string, resourceType: string, actionName: string, reqAttrs?: any) {
-    // Bootstrap bypass
+    // Bootstrap bypass (dev/local)
     if ((process.env.RBAC_BOOTSTRAP_MODE || '').toLowerCase() === 'true') {
+      const allowAll = (process.env.RBAC_BOOTSTRAP_ALLOW_ALL || '').toLowerCase() === 'true'
+      if (allowAll) return { allowed: true, userLevel: 9999, requiredLevel: 0, abac: { evaluated: false } }
       const ids = String(process.env.RBAC_BOOTSTRAP_USER_IDS || '').split(',').map(s=>s.trim()).filter(Boolean)
       if (ids.includes(String(userId))) return { allowed: true, userLevel: 9999, requiredLevel: 0, abac: { evaluated: false } }
     }
@@ -43,4 +45,3 @@ export class AuthzService {
     } finally { client.release() }
   }
 }
-

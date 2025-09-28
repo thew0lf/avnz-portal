@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
   const api = serverApiBase()
   const cookie = cookies().get(getCookieName())
   const token = cookie?.value || ''
-  const r = await fetch(`${api}/memberships`, { headers: token? { authorization: `Bearer ${token}` } : {}, cache: 'no-store' })
+  const search = req.nextUrl.search || ''
+  const r = await fetch(`${api}/memberships${search}`, { headers: token? { authorization: `Bearer ${token}` } : {}, cache: 'no-store' })
   const data = await r.json().catch(()=>({}))
   return NextResponse.json(data, { status: r.status })
 }
-

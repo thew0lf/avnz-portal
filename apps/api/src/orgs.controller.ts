@@ -1,5 +1,6 @@
 import { Controller, Post, Body, BadRequestException, Get, Req } from '@nestjs/common'
 import { pool } from './db.js'
+import { verifyPassword } from './auth.util.js'
 import { hashPassword, scryptHash, signToken, randomToken, sha256hex } from './auth.util.js'
 import { validatePassword } from './security.js'
 
@@ -67,7 +68,7 @@ export class OrgsController {
       const permList = permsKeys.rows.map((x: any) => x.key)
 
       // Issue tokens
-      const token = signToken({ userId: String(user.id), email: user.email, orgId: org.code, roles: ['org'], orgUUID: String(org.id), clientCode: String(org.code), perms: permList }, process.env.AUTH_SECRET || 'dev-secret-change-me')
+      const token = signToken({ userId: String(user.id), email: user.email, orgId: org.code, roles: ['org','portal-manager'], orgUUID: String(org.id), clientCode: String(org.code), perms: permList }, process.env.AUTH_SECRET || 'dev-secret-change-me')
       const refresh = randomToken(32)
       const hash = sha256hex(refresh)
       const exp = new Date(Date.now() + 30 * 24 * 3600 * 1000)
@@ -82,5 +83,79 @@ export class OrgsController {
     } finally {
       client.release()
     }
+  }
+
+  @Post('update')
+  async update(@Req() req: any, @Body() body: any){
+    const userId = req?.auth?.userId
+    const orgUUID = req?.auth?.orgUUID
+    const roles: string[] = req?.auth?.roles || []
+    if (!userId || !orgUUID) throw new BadRequestException('unauthorized')
+    if (!roles.includes('org')) throw new BadRequestException('forbidden')
+    const { name, code, current_password } = body || {}
+    if (!name || String(name).trim().length < 1) throw new BadRequestException('name required')
+    const c = await pool.connect(); try {
+      // Ensure membership in org
+      const m = await c.query('select 1 from memberships where user_id=$1 and org_id=$2', [userId, orgUUID])
+      if (!m.rows[0]) throw new BadRequestException('unauthorized')
+      // Load current org record
+      const cur = await c.query('select id, code, name from organizations where id=$1', [orgUUID])
+      const before = cur.rows[0] || null
+      // If code provided, validate and ensure unique
+      let newCode: string | null = null
+      if (code !== undefined) {
+        const candidate = String(code).toLowerCase()
+        if (!/^[a-z0-9-]{3,32}$/.test(candidate)) throw new BadRequestException('invalid code')
+        // Verify current password before sensitive change
+        const pw = await c.query('select password_hash from users where id=$1', [userId])
+        const row = pw.rows[0]
+        if (!row || !current_password || !await verifyPassword(String(current_password), String(row.password_hash))) throw new BadRequestException('invalid password')
+        // Unique across organizations
+        const exists = await c.query('select 1 from organizations where lower(code)=lower($1) and id<>$2 limit 1', [candidate, orgUUID])
+        if (exists.rows[0]) throw new BadRequestException('code already exists')
+        newCode = candidate
+      }
+      // Update org fields
+      if (newCode) {
+        await c.query('update organizations set name=$1, code=$2 where id=$3', [String(name), newCode, orgUUID])
+        // Best-effort: update legacy users.org_id text to reflect new code
+        try { await c.query('update users set org_id=$1 where org_id=$2', [newCode, before?.code || newCode]) } catch {}
+      } else {
+        await c.query('update organizations set name=$1 where id=$2', [String(name), orgUUID])
+      }
+      // Audit
+      const after = { name, code: newCode || before?.code }
+      try { await c.query('insert into audit_log(org_id, user_id, action, entity, entity_id, before, after) values ($1,$2,$3,$4,$5,$6,$7)', [orgUUID, userId, 'update', 'organization', String(orgUUID), JSON.stringify(before), JSON.stringify(after)]) } catch {}
+      return { ok: true }
+    } finally { c.release() }
+  }
+
+  @Get('audit')
+  async audit(@Req() req:any){
+    const userId = req?.auth?.userId
+    const orgUUID = req?.auth?.orgUUID
+    const roles: string[] = req?.auth?.roles || []
+    if (!userId || !orgUUID) throw new BadRequestException('unauthorized')
+    if (!roles.includes('org')) throw new BadRequestException('forbidden')
+    const c = await pool.connect(); try {
+      const q: any = req.query || {}
+      const lim = Math.max(1, Math.min(200, Number(q.limit || '50')))
+      const off = Math.max(0, Number(q.offset || '0'))
+      const cond: string[] = ['a.org_id = $1']
+      const args: any[] = [orgUUID]
+      if (q.action) { args.push(String(q.action).toLowerCase()); cond.push(`lower(a.action)= $${args.length}`) }
+      if (q.entity) { args.push(String(q.entity).toLowerCase()); cond.push(`lower(a.entity)= $${args.length}`) }
+      if (q.from) { args.push(new Date(String(q.from)).toISOString()); cond.push(`a.created_at >= $${args.length}`) }
+      if (q.to) { args.push(new Date(String(q.to)).toISOString()); cond.push(`a.created_at <= $${args.length}`) }
+      args.push(lim); args.push(off)
+      const sql = `select a.created_at, a.user_id, u.email as user_email, a.action, a.entity, a.entity_id, a.before, a.after
+                     from audit_log a
+                     left join users u on u.id::text = a.user_id
+                    where ${cond.join(' and ')}
+                    order by a.created_at desc
+                    limit $${args.length-1} offset $${args.length}`
+      const r = await c.query(sql, args)
+      return { rows: r.rows, limit: lim, offset: off }
+    } finally { c.release() }
   }
 }

@@ -1,0 +1,1 @@
+Bot test file for AVNZ-12 at design-2 branch.

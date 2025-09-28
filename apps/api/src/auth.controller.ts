@@ -95,11 +95,12 @@ export class AuthController {
       )
       perms = rp.rows.map((x: any) => x.key).filter(Boolean)
 
+      const legacyRoles = [membership.role]
       const token = signToken({
         userId: String(user.id),
         email: user.email,
         orgId: clientRow.client_code, // legacy text id
-        roles: [membership.role],
+        roles: legacyRoles,
         orgUUID: String(clientRow.org_id),
         clientCode: String(clientRow.client_code),
         clientId: String(clientRow.client_id),
@@ -189,10 +190,8 @@ export class AuthController {
       if (row.revoked) throw new BadRequestException('refresh token revoked')
       if (new Date(row.expires_at).getTime() < Date.now()) throw new BadRequestException('refresh token expired')
       await client.query('update refresh_tokens set last_used_at=now() where token_hash=$1', [hash])
-      const token = signToken(
-        { userId: String(row.user_id), email: row.email, orgId: row.org_id, roles: row.roles || [] },
-        process.env.AUTH_SECRET || 'dev-secret-change-me'
-      )
+      const roles = (row.roles || []) as string[]
+      const token = signToken({ userId: String(row.user_id), email: row.email, orgId: row.org_id, roles }, process.env.AUTH_SECRET || 'dev-secret-change-me')
       return { token }
     } finally {
       client.release()

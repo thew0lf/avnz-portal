@@ -3,35 +3,55 @@ export declare class AdminController {
     setSec(b: any, _nodeId?: string): Promise<{
         ok: boolean;
     }>;
-    listRoutes(_nodeId?: string, q?: string, limit?: string, offset?: string): Promise<{
+    listRoutes(_nodeId?: string, q?: string, limit?: string, offset?: string, includeDeleted?: string): Promise<{
         rows: any[];
         limit: number;
         offset: number;
         q: string;
+        include_deleted: boolean;
     }>;
     createRoute(b: any, _nodeId?: string, req?: any): Promise<any>;
     deleteRoute(id: string, _nodeId?: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listEmailTemplates(key?: string, client_id?: string): Promise<{
+    restoreRoute(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listEmailTemplates(key?: string, client_id?: string, includeDeleted?: string): Promise<{
         rows: any[];
+        include_deleted: boolean;
     }>;
     upsertEmailTemplate(b: any, req?: any): Promise<any>;
+    previewEmail(b: any, req?: any): Promise<{
+        ok: boolean;
+        from: string;
+    }>;
     delEmailTemplate(id: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listSmsTemplates(key?: string, client_id?: string): Promise<{
+    restoreEmailTemplate(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listSmsTemplates(key?: string, client_id?: string, includeDeleted?: string): Promise<{
         rows: any[];
+        include_deleted: boolean;
     }>;
     upsertSmsTemplate(b: any, req?: any): Promise<any>;
     delSmsTemplate(id: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listServiceConfigs(nodeId?: string, service?: string, client_id?: string): Promise<{
+    restoreSmsTemplate(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listServiceConfigs(nodeId?: string, service?: string, client_id?: string, includeDeleted?: string): Promise<{
         rows: any[];
+        include_deleted: boolean;
     }>;
     upsertServiceConfig(b: any, nodeId?: string, req?: any): Promise<any>;
     delServiceConfig(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    restoreServiceConfig(id: string, req?: any): Promise<{
         ok: boolean;
     }>;
     getBudget(nodeId?: string): Promise<{
@@ -40,53 +60,73 @@ export declare class AdminController {
     setBudget(nodeId?: string, b?: any): Promise<{
         ok: boolean;
     }>;
-    listRoles(_nodeId?: string, q?: string, limit?: string, offset?: string): Promise<{
+    listRoles(_nodeId?: string, q?: string, limit?: string, offset?: string, includeDeleted?: string): Promise<{
         rows: any[];
         limit: number;
         offset: number;
         q: string;
+        include_deleted: boolean;
     }>;
     createRole(b: any, _nodeId?: string, _p?: any, _q?: any, _body2?: any, req?: any): Promise<any>;
     updateRole(id: string, b: any, _nodeId?: string, req?: any): Promise<any>;
     deleteRole(id: string, _nodeId?: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listActions(_nodeId?: string, q?: string, limit?: string, offset?: string): Promise<{
+    restoreRole(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listActions(_nodeId?: string, q?: string, limit?: string, offset?: string, includeDeleted?: string): Promise<{
         rows: any[];
         limit: number;
         offset: number;
         q: string;
+        include_deleted: boolean;
     }>;
     createAction(b: any, _nodeId?: string, req?: any): Promise<any>;
     deleteAction(name: string, _nodeId?: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listPerms(_nodeId?: string, q?: string, limit?: string, offset?: string): Promise<{
+    restoreAction(name: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listPerms(_nodeId?: string, q?: string, limit?: string, offset?: string, includeDeleted?: string): Promise<{
         rows: any[];
         limit: number;
         offset: number;
         q: string;
+        include_deleted: boolean;
     }>;
     createPerm(b: any, _nodeId?: string, req?: any): Promise<any>;
     updatePerm(id: string, b: any, _nodeId?: string, req?: any): Promise<any>;
     deletePerm(id: string, _nodeId?: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listAssignments(userId?: string, nodeId?: string, limit?: string, offset?: string): Promise<{
+    restorePerm(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listAssignments(userId?: string, nodeId?: string, limit?: string, offset?: string, includeDeleted?: string): Promise<{
         rows: any[];
         limit: number;
         offset: number;
+        include_deleted: boolean;
     }>;
     createAssignment(b: any, _nodeId?: string, req?: any): Promise<any>;
     deleteAssignment(id: string, _nodeId?: string, req?: any): Promise<{
         ok: boolean;
     }>;
-    listAbac(_nodeId?: string): Promise<{
+    restoreAssignment(id: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    listAbac(_nodeId?: string, includeDeleted?: string): Promise<{
         rows: any[];
+        include_deleted: boolean;
     }>;
     createAbac(b: any, _nodeId?: string, req?: any): Promise<any>;
     updateAbac(id: string, b: any, _nodeId?: string, req?: any): Promise<any>;
     deleteAbac(id: string, _nodeId?: string, req?: any): Promise<{
+        ok: boolean;
+    }>;
+    restoreAbac(id: string, req?: any): Promise<{
         ok: boolean;
     }>;
 }

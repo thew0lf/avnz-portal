@@ -26,7 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
-import { GripVertical, MoreVertical, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { GripVertical, MoreVertical, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 
 function DragHandle({ id }: { id: UniqueIdentifier }){
   const { attributes, listeners } = useSortable({ id })
@@ -76,6 +76,7 @@ export function DataTable<TData>({
   const table = useReactTable({
     data,
     columns,
+    defaultColumn: { enableSorting: true },
     state: { sorting, pagination: { pageIndex: 0, pageSize }, columnVisibility },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
@@ -126,8 +127,37 @@ export function DataTable<TData>({
                 {table.getHeaderGroups().map(headerGroup => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      <TableHead
+                        key={header.id}
+                        aria-sort={
+                          header.column.getIsSorted() === 'asc'
+                            ? 'ascending'
+                            : header.column.getIsSorted() === 'desc'
+                            ? 'descending'
+                            : 'none'
+                        }
+                      >
+                        {header.isPlaceholder ? null : (
+                          header.column.getCanSort() ? (
+                            <button
+                              type="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                              className="inline-flex items-center gap-1 hover:underline"
+                              aria-label={`Sort by ${header.column.id}`}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {header.column.getIsSorted() === 'asc' ? (
+                                <ArrowUp className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />
+                              ) : header.column.getIsSorted() === 'desc' ? (
+                                <ArrowDown className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />
+                              ) : (
+                                <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-50" aria-hidden />
+                              )}
+                            </button>
+                          ) : (
+                            flexRender(header.column.columnDef.header, header.getContext())
+                          )
+                        )}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -194,6 +224,7 @@ export function makeActionsColumn<TData>({ onEdit, onDelete, viewHref }: { onEdi
   return {
     id: 'actions',
     header: () => null,
+    enableSorting: false,
     cell: ({ row }) => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
