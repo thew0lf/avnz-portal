@@ -5,3 +5,45 @@ echo "[pre-commit] Running lint checks..."
 bash scripts/lint.sh
 echo "[pre-commit] Lint OK"
 
+# Block committing build/vendor artifacts and very large files
+echo "[pre-commit] Scanning staged changes for disallowed paths and large files..."
+
+# 50MB in bytes
+MAX_BYTES=$((50 * 1024 * 1024))
+
+# Collect staged files (added/modified/renamed)
+if ! STAGED=$(git diff --cached --name-only -z); then
+  echo "[pre-commit] Unable to read staged files" >&2
+  exit 1
+fi
+
+bad=false
+while IFS= read -r -d '' file; do
+  # Skip if file no longer exists in index (e.g., deletions)
+  if ! git ls-files --error-unmatch -- "$file" >/dev/null 2>&1; then
+    continue
+  fi
+
+  case "$file" in
+    */node_modules/*|node_modules/*)
+      echo "[pre-commit] ERROR: Staged file under node_modules: $file" >&2
+      bad=true ;;
+    */.next/*|.next/*)
+      echo "[pre-commit] ERROR: Staged file under .next: $file" >&2
+      bad=true ;;
+  esac
+
+  # Determine size of staged blob
+  size=$(git cat-file -s ":$file" 2>/dev/null || echo 0)
+  if [ "${size:-0}" -gt "$MAX_BYTES" ]; then
+    echo "[pre-commit] ERROR: $file is ${size} bytes (> 50MB). Use Git LFS or exclude it." >&2
+    bad=true
+  fi
+done < <(printf "%s" "$STAGED")
+
+if [ "$bad" = true ]; then
+  echo "[pre-commit] Commit blocked due to disallowed content." >&2
+  exit 1
+fi
+
+echo "[pre-commit] Staged files OK"
