@@ -12,6 +12,8 @@ import pathlib
 import subprocess
 import shlex
 import json
+import urllib.request
+import urllib.error
 
 
 def main():
@@ -130,9 +132,14 @@ def main():
                         msg = f"{issue_key}: automate changes\n\n{(out.get('plan') if isinstance(out, dict) else '')}"
                         run(f"git commit -m {shlex.quote(msg)}", git_root)
 
-                        # basic tests (best-effort)
+                        # basic tests (best-effort) incl. lint if available
                         t_out = []
-                        for cmd in ["bash scripts/health-check.sh", "bash scripts/smoke-test.sh"]:
+                        test_cmds = [
+                            "bash scripts/lint.sh",
+                            "bash scripts/health-check.sh",
+                            "bash scripts/smoke-test.sh",
+                        ]
+                        for cmd in test_cmds:
                             rc, so, se = run(cmd, git_root)
                             t_out.append({"cmd": cmd, "rc": rc, "out": so[-4000:], "err": se[-4000:]})
                         if isinstance(out, dict): out["tests"] = t_out
@@ -153,9 +160,38 @@ def main():
                             if gh_token and repo:
                                 import requests
                                 title = msg.split("\n",1)[0] or (meta.get("jira_issue_key") or branch)
-                                payload = {"title": title, "head": branch, "base": main_branch, "body": out.get("implementation") if isinstance(out, dict) else ""}
+                                # derive epic branch as base if child branch
+                                base_branch = main_branch
+                                if "/" in branch:
+                                    parts = branch.split("/")
+                                    # work_prefix/EPIC[/TICKET]
+                                    if len(parts) >= 2:
+                                        base_branch = f"{parts[0]}/{parts[1]}"
+                                payload = {"title": title, "head": branch, "base": base_branch, "body": out.get("implementation") if isinstance(out, dict) else ""}
                                 r = requests.post(f"https://api.github.com/repos/{repo}/pulls", json=payload, headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"}, timeout=10)
                                 if isinstance(out, dict): out["pull_request"] = r.json()
+
+                                # If this is QA phase completion, add label and optionally auto-merge
+                                try:
+                                    if str(phase).lower() == "qa":
+                                        pr = r.json()
+                                        pr_number = pr.get("number")
+                                        if pr_number:
+                                            # add label qa-approved
+                                            requests.post(
+                                                f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels",
+                                                json={"labels":["qa-approved"]},
+                                                headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"}, timeout=10
+                                            )
+                                            if os.getenv("AUTO_MERGE_CHILD","0") == "1":
+                                                # try to merge PR
+                                                requests.put(
+                                                    f"https://api.github.com/repos/{repo}/pulls/{pr_number}/merge",
+                                                    json={"merge_method":"squash"},
+                                                    headers={"Authorization": f"Bearer {gh_token}", "Accept": "application/vnd.github+json"}, timeout=10
+                                                )
+                                except Exception:
+                                    pass
                 except Exception as e:
                     if isinstance(out, dict): out["commit_error"] = str(e)
                 # attempt to post usage if meta has org/client/project and service token is set
@@ -197,6 +233,24 @@ def main():
                         requests.post(f"{api_base}/jira/agents-complete", json=payload, headers={"x-service-token": svc_token}, timeout=3)
                 except Exception:
                     pass
+
+                # Optional Slack status when in AWAY mode
+                try:
+                    away = os.getenv("AWAY_MODE", "0") == "1" or os.path.exists("/workspace/.away_mode")
+                    hook = os.getenv("SLACK_WEBHOOK_URL", "").strip()
+                    if away and hook:
+                        phase = (meta or {}).get("phase") or "dev"
+                        text = f"[bots] {jira_key or job_id}: phase={phase} status=done\n"
+                        if isinstance(out, dict) and out.get("pull_request"):
+                            pr = out.get("pull_request") or {}
+                            url = pr.get("html_url") or pr.get("url") or ""
+                            if url:
+                                text += f"PR: {url}\n"
+                        data = json.dumps({"text": text}).encode("utf-8")
+                        req = urllib.request.Request(hook, data=data, headers={"Content-Type":"application/json"})
+                        urllib.request.urlopen(req, timeout=3)
+                except Exception:
+                    pass
                 print(f"[worker] done {job_id}")
                 # Phase orchestration: queue next phase automatically
                 try:
@@ -228,9 +282,9 @@ def main():
                 except Exception:
                     pass
                 print(f"[worker] error {job_id}: {e}")
-        except Exception as loop_err:
-            print("[worker] loop error:", loop_err)
-            time.sleep(1)
+            except Exception as loop_err:
+                print("[worker] loop error:", loop_err)
+                time.sleep(1)
 
 
 if __name__ == "__main__":
