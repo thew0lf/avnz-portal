@@ -1,12 +1,9 @@
-"use client"
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Input } from '@/components/ui/input'
-import { RSelect, RSelectTrigger, RSelectContent, RSelectItem, RSelectValue, RSelectGroup, RSelectLabel, RSelectSeparator } from '@/components/ui/rselect'
-import SearchableRSelect from '@/components/ui/searchable-rselect'
-import * as React from 'react'
+import { RSelect } from '@/components/ui/rselect'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast-provider'
 
@@ -18,14 +15,9 @@ const schema = z.object({
 type Values = z.infer<typeof schema>
 
 export default function InviteCreateForm({ clients, canSelectClient, onCreated }: { clients: Array<any>; canSelectClient: boolean; onCreated?: () => void }) {
-  const { register, handleSubmit, formState: { isSubmitting, errors }, reset, setValue, watch } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { role: 'user' } as any })
+  const { register, handleSubmit, formState: { isSubmitting, errors }, reset, setValue, watch } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { role: 'user' } })
   const clientSel = watch('client_id')
   const roleSel = watch('role')
-  const clientGroups = React.useMemo(()=>{
-    const g: Record<string, any[]> = {}
-    for (const c of clients||[]) { const k = String(c.name||'').charAt(0).toUpperCase() || '#'; (g[k] ||= []).push(c) }
-    return Object.entries(g).sort(([a],[b])=>a.localeCompare(b))
-  },[clients])
   const [serverError, setServerError] = useState<string | null>(null)
   const { success, error: toastError } = useToast()
   return (
@@ -48,7 +40,7 @@ export default function InviteCreateForm({ clients, canSelectClient, onCreated }
         <div>
           <label className="block text-sm text-muted-foreground">Client</label>
           <input type="hidden" {...register('client_id')} />
-          <SearchableRSelect
+          <RSelect
             value={clientSel || ''}
             onValueChange={(v)=>setValue('client_id', v, { shouldValidate: true })}
             placeholder="Select client"
@@ -68,10 +60,8 @@ export default function InviteCreateForm({ clients, canSelectClient, onCreated }
           </RSelectContent>
         </RSelect>
       </div>
-      <div>
-        <Button type="submit" disabled={isSubmitting}>Send Invite</Button>
-      </div>
-      {serverError && <div className="text-sm text-red-600 md:col-span-4" role="alert">{serverError}</div>}
+      <Button type="submit" disabled={isSubmitting}>Send Invite</Button>
+      {serverError && <div className="text-sm text-red-600" role="alert">{serverError}</div>}
     </form>
   )
 }

@@ -103,9 +103,8 @@ export async function requeueStale(minutes: number = 30){
       const exists = await c.query('select 1 from jira_jobs where org_id=$1 and issue_key=$2 and deleted_at is null limit 1', [orgId, key])
       if (exists.rows.length > 0) continue
       const summary = String(it.fields?.summary||'')
-      const assigneeName = it.fields?.assignee?.displayName || undefined
       const taskText = `[${phase.toUpperCase()} Jira ${key}] Re-run phase ${phase} for stale issue ${key}.\n\n${summary}`
-      const body = JSON.stringify({ task: taskText, meta: { org_id: orgId, jira_issue_key: key, phase, assigned_to: assigneeName } })
+      const body = JSON.stringify({ task: taskText, meta: { org_id: orgId, jira_issue_key: key, phase } })
       try {
         const rr = await fetch(`${aiBase}/agents/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
         const jj: any = await rr.json().catch(()=>({}))

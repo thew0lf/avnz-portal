@@ -30,6 +30,7 @@ import { SpecController } from "./spec.controller.js";
 import { SpecAuthController } from "./spec-auth.controller.js";
 import { SlackController } from "./slack.controller.js";
 import { JiraController } from "./jira.controller.js";
+import { JiraForceController } from "./jira-force.controller.js";
 import { AuthzService } from "./authz/authz.service.js";
 import { RbacGuard } from "./authz/rbac.guard.js";
 import { startRbacNotifyListener } from "./db/notify.js";
@@ -39,12 +40,12 @@ import { authMiddleware } from "./auth.middleware.js";
 import { rateLimitMiddleware } from "./rate-limit.middleware.js";
 import { securityHeadersMiddleware } from "./security-headers.middleware.js";
 import { routeGuardMiddleware } from "./route-guard.middleware.js";
-import { backfillInProgress } from "./jira-backfill.js";
+import { backfillInProgress, requeueStale } from "./jira-backfill.js";
 let AppModule = class AppModule {
     configure(c) { c.apply(securityHeadersMiddleware, rateLimitMiddleware, authMiddleware, routeGuardMiddleware).forRoutes("*"); }
 };
 AppModule = __decorate([
-    Module({ controllers: [HealthController, MeController, UsageController, ComplianceController, PricingController, AuthController, OrgsController, ClientsController, ProjectsController, MembershipsController, RolesController, ProjectMembersController, CheckController, NodesController, AdminController, OutboxController, SpecController, SpecAuthController, BillingController, SlackController, JiraController], providers: [AuthzService, RbacGuard, { provide: APP_GUARD, useClass: RbacGuard }] })
+    Module({ controllers: [HealthController, MeController, UsageController, ComplianceController, PricingController, AuthController, OrgsController, ClientsController, ProjectsController, MembershipsController, RolesController, ProjectMembersController, CheckController, NodesController, AdminController, OutboxController, SpecController, SpecAuthController, BillingController, SlackController, JiraController, JiraForceController], providers: [AuthzService, RbacGuard, { provide: APP_GUARD, useClass: RbacGuard }] })
 ], AppModule);
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, { cors: true });
@@ -64,6 +65,12 @@ async function bootstrap() {
     if (iv > 0) {
         setInterval(() => backfillInProgress().catch(() => { }), iv * 1000);
         console.log('[jira-backfill] polling enabled every', iv, 'sec');
+    }
+    const rqIv = Number(process.env.JIRA_REQUEUE_STALE_INTERVAL_SEC || '0');
+    const rqMin = Number(process.env.JIRA_REQUEUE_STALE_MINUTES || '30');
+    if (rqIv > 0) {
+        setInterval(() => requeueStale(rqMin).catch(() => { }), rqIv * 1000);
+        console.log('[jira-requeue-stale] polling enabled every', rqIv, 'sec', 'mins=', rqMin);
     }
 }
 bootstrap();

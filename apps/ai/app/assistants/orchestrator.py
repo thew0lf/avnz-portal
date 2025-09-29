@@ -38,7 +38,12 @@ You are Reviewer-1. Critique the plan and implementation:
 PHASE_PROMPTS: Dict[str, Dict[str, str]] = {
     "dev": {
         "planner": PLANNER_SYS,
-        "implementer": IMPLEMENTER_SYS,
+        "implementer": (
+            IMPLEMENTER_SYS
+            + "\n\nAlso include unit tests for your changes:"
+              " for API (NestJS) tests under apps/api (e.g., *.spec.ts or mjs runner),"
+              " and for Web (Next.js) under apps/web (e.g., *.test.tsx)."
+        ),
         "reviewer": REVIEWER_SYS,
     },
     "review": {
@@ -48,7 +53,12 @@ PHASE_PROMPTS: Dict[str, Dict[str, str]] = {
     },
     "qa": {
         "planner": "You are QA Planner. Create acceptance tests aligned to user stories and edge cases. Include data setup. Keep it under 120 words.",
-        "implementer": "You are QA Engineer. Write a step-by-step manual QA checklist and propose unit/integration tests. Include expected results and rollback checks.",
+        "implementer": (
+            "You are QA Engineer. Provide:"
+            " 1) A step-by-step manual QA checklist with expected results and rollback checks."
+            " 2) A Playwright e2e spec under apps/web/tests/e2e/*.spec.ts (TypeScript) to validate the user flow."
+            " Include the Playwright test in the JSON files block so it can be applied."
+        ),
         "reviewer": "You are QA Lead. Identify gaps, flakiness risks, and add 2 additional edge cases. Under 80 words.",
     },
     "test": {

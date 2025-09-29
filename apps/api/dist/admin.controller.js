@@ -239,20 +239,35 @@ let AdminController = class AdminController {
         c.release();
     } }
     // Budget
-    async getBudget(nodeId) { const c = await pool.connect(); try {
-        const r = await c.query('select monthly_limit_usd from budgets where org_id=$1', [nodeId]);
-        return { monthly_limit_usd: r.rows[0]?.monthly_limit_usd || 0 };
+    async getBudget(nodeId) {
+        const id = String(nodeId || '').trim();
+        if (!id || !/^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$/i.test(id)) {
+            throw new BadRequestException('missing_or_invalid_nodeId');
+        }
+        const c = await pool.connect();
+        try {
+            const r = await c.query('select monthly_limit_usd from budgets where org_id=$1', [id]);
+            return { monthly_limit_usd: r.rows[0]?.monthly_limit_usd || 0 };
+        }
+        finally {
+            c.release();
+        }
     }
-    finally {
-        c.release();
-    } }
-    async setBudget(nodeId, b) { const limit = Number(b?.monthly_limit_usd || 0); const c = await pool.connect(); try {
-        await c.query('insert into budgets(org_id, monthly_limit_usd) values ($1,$2) on conflict (org_id) do update set monthly_limit_usd=excluded.monthly_limit_usd, updated_at=now()', [nodeId, limit]);
-        return { ok: true };
+    async setBudget(nodeId, b) {
+        const id = String(nodeId || '').trim();
+        if (!id || !/^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$/i.test(id)) {
+            throw new BadRequestException('missing_or_invalid_nodeId');
+        }
+        const limit = Number(b?.monthly_limit_usd || 0);
+        const c = await pool.connect();
+        try {
+            await c.query('insert into budgets(org_id, monthly_limit_usd) values ($1,$2) on conflict (org_id) do update set monthly_limit_usd=excluded.monthly_limit_usd, updated_at=now()', [id, limit]);
+            return { ok: true };
+        }
+        finally {
+            c.release();
+        }
     }
-    finally {
-        c.release();
-    } }
     // Roles
     async listRoles(_nodeId, q, limit, offset, includeDeleted) { const c = await pool.connect(); try {
         const lim = Math.max(1, Math.min(200, Number(limit || '20')));

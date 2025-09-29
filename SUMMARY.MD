@@ -933,6 +933,13 @@ Update 2025-09-28 (Bots Workflow)
 - Added `scripts/git/auto-pr-when-done.sh` for gated PR creation that ensures a `AVNZ-###: Code complete` commit exists at PR time.
 - Default bot behavior: `AUTO_PR_WHEN_DONE=1` (configurable).
 - Orchestrator now extracts `files` from Implementer output and retries with a "JSON‑only files" instruction if absent, enabling the worker to auto‑apply code changes reliably.
+- Worker enhancements: phase‑specific checks
+  - Review: runs `scripts/lint.sh` (when present) to assist Sr Dev review; results reported back to Jira in the job comment.
+  - QA: performs HTTP sanity checks (API `/health`, Web `/login`) to validate responsiveness; results included in Jira comments.
+- Kickback logic:
+  - If Review checks fail (lint), the worker queues a Dev kickback job and the API returns the issue to “In Progress” with label `review-failed`.
+  - If QA checks fail (API/Web not healthy), the worker queues a Dev kickback job and the API returns the issue to “In Progress” with label `qa-failed`.
+  - On pass, the ticket transitions forward (Dev/Review → “QA Testing”; QA/Test → “Done”).
 
 Update 2025-09-28 (Jira Monitor & Stale Requeue)
 - API (JiraController):
@@ -945,3 +952,26 @@ Update 2025-09-28 (Jira Monitor & Stale Requeue)
 Update 2025-09-28 (Automation Mandate)
 - Policy: Add as much safe, auditable bot automation as possible. Target areas: Jira triggers (queue, requeue), phase orchestration (dev→review→qa→...), PR gating, doc updates, and monitoring. All automation must be env-gated and observable via Admin pages.
 - Defaults: Enabled auto-requeue every 5 minutes via `JIRA_REQUEUE_STALE_INTERVAL_SEC=300` (local dev). Threshold `JIRA_REQUEUE_STALE_MINUTES=30`.
+
+Update 2025-09-29 (Web — Build fix)
+- Fixed Next.js build error caused by an unterminated regex literal in Jira assignees parser.
+- Files: `apps/web/app/admin/dashboard/jira/JiraAssignees.tsx` (regex consolidated to single line: `split(/[;,\n]+/)`).
+- Behavior: Web compiles successfully; parsing supports commas, semicolons, and newlines between assignees.
+2025-09-29 — Jira assignment persistence via service token; Force Start wiring
+
+- API
+  - Added POST `/admin/services/configs/persist-jira-assignees` secured by `X-Service-Token` (env `SERVICE_TOKEN`). Reads env fallbacks (`JIRA_ASSIGNEE_*[_LIST]`, `JIRA_ASSIGNMENT_EXCLUDE`, `JIRA_LOAD_BALANCE`) and persists org‑scoped `service_configs` under `service=jira` (names: `assignee_dev|review|qa|test|audit`, `assignment_exclude`, `load_balance`).
+  - Updated `jira.controller.ts` to honor DB `assignment_exclude` via `getServiceConfig()` before env fallback.
+  - Wired controller in `apps/api/src/main.ts`.
+- Web
+  - `Admin → Jira → Monitor` now includes a “Persist Assignment Lists” button that invokes the new endpoint via `/api/admin/proxy` (proxy injects `X-Service-Token`).
+  - Updated proxy (`apps/web/app/api/admin/proxy/route.ts`) to forward `X-Service-Token` for `/jira/*` and the new admin persist route.
+- Files touched
+  - `apps/api/src/admin-secrets-token.controller.ts` (new)
+  - `apps/api/src/jira.controller.ts`
+  - `apps/api/src/main.ts`
+  - `apps/web/app/api/admin/proxy/route.ts`
+  - `apps/web/app/admin/jira-monitor/page.tsx`
+- Env/secrets
+  - Requires `SERVICE_TOKEN` and `JIRA_DEFAULT_ORG_CODE` set in API env.
+  - Assignment lists env fallbacks remain supported; DB values now take precedence where applicable.
