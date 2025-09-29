@@ -7,6 +7,7 @@ function fmt(ts?: string){ if(!ts) return '—'; try{ return new Date(ts).toLoca
 export default function JiraStaleTable({ rows }: { rows: any[] }){
   const cols: CommonColumn<any>[] = [
     { accessorKey: 'key', header: 'Issue', cell: ({ row }) => <span className="font-mono text-xs">{row.original.key}</span> },
+    { accessorKey: 'assignee', header: 'Assigned', cell: ({ row }) => row.original.assignee || '—' },
     { accessorKey: 'status', header: 'Status', cell: ({ row }) => row.original.status || '—' },
     { accessorKey: 'updated', header: 'Updated', cell: ({ row }) => fmt(row.original.updated) },
     { accessorKey: 'summary', header: 'Summary', cell: ({ row }) => row.original.summary || '—' },

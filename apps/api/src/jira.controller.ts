@@ -215,7 +215,8 @@ export class JiraController {
           const existing = await client.query('select job_id from jira_jobs where org_id=$1 and issue_key=$2 and deleted_at is null limit 1', [orgId, issueKey])
           if (existing.rows.length === 0) {
             const taskText = `[Jira ${issueKey}] ${fields.summary || 'No summary'}\n\n${fields.description || ''}`
-            const body = JSON.stringify({ task: taskText, meta: { org_id: orgId, jira_issue_key: issueKey } })
+            const assigneeNameInit = fields?.assignee?.displayName || undefined
+            const body = JSON.stringify({ task: taskText, meta: { org_id: orgId, jira_issue_key: issueKey, phase: 'dev', assigned_to: assigneeNameInit } })
             const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
             const r = await fetch(`${aiBase}/agents/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
             const j = await r.json().catch(()=>({})) as any
@@ -298,7 +299,7 @@ export class JiraController {
     if (!domain || !email || !apiToken) return { issues: [] }
     const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
     const jql = encodeURIComponent(`project = ${project} AND statusCategory != Done AND updated <= -${mins}m ORDER BY updated DESC`)
-    const url = `https://${domain}/rest/api/3/search?jql=${jql}&maxResults=50&fields=summary,status,updated`
+    const url = `https://${domain}/rest/api/3/search?jql=${jql}&maxResults=50&fields=summary,status,updated,assignee`
     const r = await fetch(url, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
     if (!r.ok) return { issues: [] }
     const data: any = await r.json().catch(()=>({ issues: [] }))
@@ -307,6 +308,7 @@ export class JiraController {
       summary: it.fields?.summary,
       status: it.fields?.status?.name,
       updated: it.fields?.updated,
+      assignee: it.fields?.assignee?.displayName || null,
     }))
     return { issues, minutes: mins }
   }
@@ -350,8 +352,9 @@ export class JiraController {
         const exists = await c.query('select 1 from jira_jobs where org_id=$1 and issue_key=$2 and deleted_at is null limit 1', [orgUUID, key])
         if (exists.rows.length > 0) continue
         const summary = String(it.fields?.summary||'')
+        const assigneeName = it.fields?.assignee?.displayName || undefined
         const taskText = `[${phase.toUpperCase()} Jira ${key}] Re-run phase ${phase} for stale issue ${key}.\n\n${summary}`
-        const body = JSON.stringify({ task: taskText, meta: { org_id: orgUUID, jira_issue_key: key, phase } })
+        const body = JSON.stringify({ task: taskText, meta: { org_id: orgUUID, jira_issue_key: key, phase, assigned_to: assigneeName } })
         try {
           const rr = await fetch(`${aiBase}/agents/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
           const jj: any = await rr.json().catch(()=>({}))
@@ -381,7 +384,7 @@ export class JiraController {
     const apiToken = process.env.JIRA_API_TOKEN || ''
     if (!domain || !email || !apiToken) return { ok: false, reason: 'missing_jira_env' }
     const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
-    const infoRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,status,updated`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+    const infoRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,status,updated,assignee`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
     if (!infoRes.ok) return { ok: false, reason: 'jira_fetch_failed', status: infoRes.status }
     const info: any = await infoRes.json().catch(()=>({}))
     const statusName = String(info?.fields?.status?.name || '').toLowerCase()
@@ -396,8 +399,9 @@ export class JiraController {
       if (exists.rows.length > 0) return { ok: true, queued: 0, reason: 'already_exists' }
       const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
       const summary = String(info?.fields?.summary || '')
+      const assigneeName = info?.fields?.assignee?.displayName || undefined
       const taskText = `[${phase.toUpperCase()} Jira ${key}] Re-run phase ${phase} for stale issue ${key}.\n\n${summary}`
-      const body = JSON.stringify({ task: taskText, meta: { org_id: orgUUID, jira_issue_key: key, phase } })
+      const body = JSON.stringify({ task: taskText, meta: { org_id: orgUUID, jira_issue_key: key, phase, assigned_to: assigneeName } })
       const rr = await fetch(`${aiBase}/agents/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
       const jj: any = await rr.json().catch(()=>({}))
       const jobId = jj.job_id || jj.id || null
