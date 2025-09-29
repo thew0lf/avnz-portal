@@ -288,21 +288,47 @@ def main():
                 try:
                     phase = (meta or {}).get("phase") or "dev"
                     next_phase = None
-                    if phase in (None, "", "dev"):
-                        next_phase = "review"
-                    elif phase == "review":
-                        next_phase = "qa"
+                    kick_reason = None
+                    # Determine pass/fail signals from automated checks
+                    if phase == "review":
+                        lint_ok = True
+                        try:
+                            lint_ok = bool(out.get("review_checks", {}).get("lint", {}).get("ok", True)) if isinstance(out, dict) else True
+                        except Exception:
+                            lint_ok = True
+                        next_phase = "qa" if lint_ok else "dev"
+                        if not lint_ok:
+                            kick_reason = "review_failed"
                     elif phase == "qa":
-                        next_phase = "test"
+                        qa_ok = True
+                        try:
+                            qc = out.get("qa_checks", {}) if isinstance(out, dict) else {}
+                            qa_ok = bool(qc.get("api_health", {}).get("ok", True)) and bool(qc.get("web_login", {}).get("ok", True))
+                        except Exception:
+                            qa_ok = True
+                        next_phase = "test" if qa_ok else "dev"
+                        if not qa_ok:
+                            kick_reason = "qa_failed"
                     elif phase == "test":
                         next_phase = "audit"
+                    else:
+                        # default chain: dev -> review
+                        next_phase = "review"
+
                     # 'audit' terminal: no further steps
                     if next_phase:
                         key = (meta or {}).get("jira_issue_key") or ""
                         summary_line = (out.get("plan") or "").splitlines()[0] if isinstance(out, dict) else ""
-                        nxt_task = f"[{next_phase.upper()} Jira {key}] Follow-up for phase {next_phase}.\n{summary_line}".strip()
+                        if kick_reason == "review_failed":
+                            nxt_task = f"[DEV Jira {key}] Kickback from Review: fix lint issues.\n{summary_line}".strip()
+                        elif kick_reason == "qa_failed":
+                            nxt_task = f"[DEV Jira {key}] Kickback from QA: fix QA failures.\n{summary_line}".strip()
+                        else:
+                            nxt_task = f"[{next_phase.upper()} Jira {key}] Follow-up for phase {next_phase}.\n{summary_line}".strip()
                         m2 = dict(meta or {})
                         m2["phase"] = next_phase
+                        if kick_reason:
+                            m2["kickback"] = kick_reason
                         new_job(nxt_task, m2)
                 except Exception:
                     pass

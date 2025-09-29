@@ -599,11 +599,38 @@ export class JiraController {
           return { ok: true, note: 'missing_details' }
         }
       } catch {}
-      // Transition based on phase (only after validation above)
+      // Transition based on phase and checks (only after validation above)
       let target = process.env.JIRA_TRANSITION_ON_COMPLETE || 'In Review'
-      if (phase === 'dev' || phase === 'review') target = 'QA Testing'
-      if (phase === 'qa' || phase === 'test') target = 'Done'
-      if (phase === 'audit') target = ''
+      // Detect failures from checks or explicit kickback
+      let failed = false
+      try {
+        if (kickback) failed = true
+        if (!failed && phase === 'review') {
+          const rc = (result && (result as any).review_checks) || {}
+          failed = rc && rc.lint && rc.lint.ok === false
+        }
+        if (!failed && phase === 'qa') {
+          const qc = (result && (result as any).qa_checks) || {}
+          const aok = qc && qc.api_health && qc.api_health.ok !== false
+          const wok = qc && qc.web_login && qc.web_login.ok !== false
+          failed = !(aok && wok)
+        }
+      } catch {}
+      if (failed) {
+        target = 'In Progress'
+        // Label ticket to indicate failure reason
+        try {
+          const r0 = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=labels`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+          const j0: any = await r0.json().catch(()=>({}))
+          const labels: string[] = Array.isArray(j0?.fields?.labels)? j0.fields.labels : []
+          const next = Array.from(new Set([...(labels||[]), phase === 'qa' ? 'qa-failed' : 'review-failed']))
+          await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { method:'PUT', headers:{ 'Authorization': `Basic ${basic}`, 'Content-Type':'application/json' }, body: JSON.stringify({ fields: { labels: next } }) })
+        } catch {}
+      } else {
+        if (phase === 'dev' || phase === 'review') target = 'QA Testing'
+        if (phase === 'qa' || phase === 'test') target = 'Done'
+        if (phase === 'audit') target = ''
+      }
       try {
         if (target) {
           const tRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })

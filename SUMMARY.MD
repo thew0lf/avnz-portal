@@ -936,6 +936,10 @@ Update 2025-09-28 (Bots Workflow)
 - Worker enhancements: phase‑specific checks
   - Review: runs `scripts/lint.sh` (when present) to assist Sr Dev review; results reported back to Jira in the job comment.
   - QA: performs HTTP sanity checks (API `/health`, Web `/login`) to validate responsiveness; results included in Jira comments.
+- Kickback logic:
+  - If Review checks fail (lint), the worker queues a Dev kickback job and the API returns the issue to “In Progress” with label `review-failed`.
+  - If QA checks fail (API/Web not healthy), the worker queues a Dev kickback job and the API returns the issue to “In Progress” with label `qa-failed`.
+  - On pass, the ticket transitions forward (Dev/Review → “QA Testing”; QA/Test → “Done”).
 
 Update 2025-09-28 (Jira Monitor & Stale Requeue)
 - API (JiraController):
