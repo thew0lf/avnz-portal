@@ -67,11 +67,3 @@ export async function backfillInProgress(){
     return { ok: true, total, queued, failed }
   } finally { c.release() }
 }
-
-export async function requeueStale(minutes: number = 30){
-  const domain = process.env.JIRA_DOMAIN || ''
-  const email = process.env.JIRA_EMAIL || ''
-  const apiToken = process.env.JIRA_API_TOKEN || ''
-  const project = process.env.JIRA_PROJECT_KEY || 'AVNZ'
-  const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || ''
-  const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
