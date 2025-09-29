@@ -282,9 +282,9 @@ def main():
                 except Exception:
                     pass
                 print(f"[worker] error {job_id}: {e}")
-            except Exception as loop_err:
-                print("[worker] loop error:", loop_err)
-                time.sleep(1)
+        except Exception as loop_err:
+            print("[worker] loop error:", loop_err)
+            time.sleep(1)
 
 
 if __name__ == "__main__":
