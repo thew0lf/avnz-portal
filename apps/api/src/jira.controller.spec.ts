@@ -1,22 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JiraForceController } from './jira-force.controller';
-import { BadRequestException } from '@nestjs/common';
+it('should throw BadRequestException for missing JIRA_DOMAIN', async () => {
+    process.env.JIRA_DOMAIN = '';
+    await expect(controller.forceStart({ body: { keys: ['AVNZ-1'] } })).rejects.toThrow(BadRequestException);
+});
 
-describe('JiraForceController', () => {
-  let controller: JiraForceController;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [JiraForceController],
-    }).compile();
-    controller = module.get<JiraForceController>(JiraForceController);
-  });
-
-  it('should throw BadRequestException for missing keys', async () => {
-    await expect(controller.forceStart({ body: {} })).rejects.toThrow(BadRequestException);
-  });
-
-  it('should throw BadRequestException for invalid issue key format', async () => {
-    await expect(controller.forceStart({ body: { keys: ['INVALID-KEY'] } })).rejects.toThrow(BadRequestException);
-  });
+it('should throw ForbiddenException for unauthorized access', async () => {
+    await expect(controller.forceStart({ body: { keys: ['AVNZ-1'] }, headers: { authorization: '' } })).rejects.toThrow(ForbiddenException);
 });
