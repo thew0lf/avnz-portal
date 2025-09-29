@@ -1,4 +1,3 @@
-// Add the following tests in jira.controller.spec.ts
 it('should return empty CSV when results are empty', async () => {
     const req = { query: { format: 'csv' }, body: { keys: [] } }; // Empty keys
     const result = await controller.forceStart(req);
