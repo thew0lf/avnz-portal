@@ -1,4 +1,3 @@
-"use client"
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -63,7 +62,8 @@ export default function JiraAssignees(){
   }
 
   function parsePeople(v: string){
-    const parts = String(v||'').split(/[;,\n]+/).map(s=>s.trim()).filter(Boolean)
+    const parts = String(v||'').split(/[;,
+]+/).map(s=>s.trim()).filter(Boolean)
     return parts.map(p => {
       if (p.includes('|')) { const [name,title] = p.split('|'); return { name: name.trim(), title: (title||'').trim() } }
       const m = p.match(/^(.*)\((.*)\)$/)
@@ -87,65 +87,4 @@ export default function JiraAssignees(){
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-medium">Load balance by availability</div>
-                  <div className="text-xs text-muted-foreground">Choose least‑loaded; ties use round‑robin. Disable to use only RR/random.</div>
-                </div>
-                <Input type="checkbox" className="w-5 h-5" checked={loadBalance} onChange={(e)=>setLoadBalance(e.target.checked)} />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Assignment lock label</div>
-                <div className="text-xs text-muted-foreground">If present on an issue, the portal will not override the assignee.</div>
-                <Input value={lockLabel} onChange={(e)=>setLockLabel(e.target.value)} />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button type="button" onClick={async ()=>{
-                  setLoading(true)
-                  try{
-                    await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/admin/services/configs', method:'POST', body:{ service:'jira', name:'load_balance', value: (loadBalance? '1':'0') } }) })
-                    await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/admin/services/configs', method:'POST', body:{ service:'jira', name:'assignment_lock_label', value: lockLabel||'assignee-locked' } }) })
-                    await load(); setSettingsOpen(false)
-                  } finally { setLoading(false) }
-                }} disabled={loading}>Save</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        {rows.map(r=> (
-          <div key={r.name} className="border rounded p-3 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">{labelOf(r.name)}</div>
-              <div className="text-xs text-muted-foreground break-words">
-                {parsePeople(r.value).length>0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {parsePeople(r.value).map((p,i)=> (
-                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded border text-xs">{p.name}{p.title? ` (${p.title})`: ''}</span>
-                    ))}
-                  </div>
-                ) : '—'}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Dialog open={open===r.name} onOpenChange={(o)=> { if(!o) setOpen(undefined) }}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="secondary" onClick={()=> { setVal(r.value||''); setOpen(r.name) }}>Edit</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Edit {labelOf(r.name)} assignees</DialogTitle></DialogHeader>
-                  <div className="space-y-3">
-                    <div className="text-sm text-muted-foreground">Comma/semicolon separated names or emails</div>
-                    <Input value={val} onChange={e=>setVal(e.target.value)} placeholder="e.g., Lucas Meyer, Carlos Hernández; Sophia Li" />
-                    <div className="flex gap-2 justify-end">
-                      {r.id && (<Button type="button" variant="destructive" disabled={loading} onClick={()=>remove(r.id)}>Delete</Button>)}
-                      <Button type="button" onClick={()=>save(r.name, val)} disabled={loading}>Save</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+                  <div className="text-xs text-muted-foreground">
