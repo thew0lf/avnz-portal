@@ -1,1 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing'; import { JiraForceController } from './jira-force.controller'; import { BadRequestException } from '@nestjs/common'; describe('JiraForceController', () => { let controller: JiraForceController; beforeEach(async () => { const module: TestingModule = await Test.createTestingModule({ controllers: [JiraForceController], }).compile(); controller = module.get<JiraForceController>(JiraForceController); }); it('should return CSV format when format=csv', async () => { const req = { query: { format: 'csv' }, body: { keys: ['TEST-1'] } }; const result = await controller.forceStart(req); expect(result.headers['Content-Type']).toBe('text/csv'); }); it('should throw BadRequestException for missing keys', async () => { const req = { query: { format: 'csv' }, body: {} }; await expect(controller.forceStart(req)).rejects.toThrow(BadRequestException); }); });
+  it('should return CSV format when format=csv', async () => {
+    const req = { query: { format: 'csv' }, body: { keys: ['TEST-1'] } };
+    const result = await controller.forceStart(req);
+    expect(result.headers['Content-Type']).toBe('text/csv');
+  });
