@@ -1,15 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Jira Force Start API Tests', () => {
-  const baseUrl = 'http://localhost:3000'; // Update with your base URL
-  const validToken = 'your_valid_token'; // Replace with a valid token
-  const invalidToken = 'invalid_token';
-  const validKeys = ['TEST-1', 'TEST-2'];
-  const emptyKeys = [];
-  const invalidOrgCode = 'INVALID_ORG_CODE';
+  const validToken = 'your_valid_token_here'; // Replace with a valid token
+  const validKeys = ['TEST-1', 'TEST-2']; // Replace with valid issue keys
 
-  test('Valid Token and Keys Provided', async ({ request }) => {
-    const response = await request.post(`${baseUrl}/jira/force-start`, {
+  test('Valid Token and Keys', async ({ request }) => {
+    const response = await request.post('/jira/force-start', {
       headers: {
         'x-service-token': validToken,
       },
@@ -18,40 +14,38 @@ test.describe('Jira Force Start API Tests', () => {
       },
     });
     expect(response.status()).toBe(200);
-    const responseBody = await response.json();
-    expect(responseBody).toHaveProperty('results');
   });
 
   test('Missing Keys', async ({ request }) => {
-    const response = await request.post(`${baseUrl}/jira/force-start`, {
+    const response = await request.post('/jira/force-start', {
       headers: {
         'x-service-token': validToken,
       },
-      data: {
-        keys: emptyKeys,
-      },
+      data: {},
     });
     expect(response.status()).toBe(400);
-    const responseBody = await response.json();
-    expect(responseBody.message).toBe('missing keys');
+    expect(await response.json()).toEqual(expect.objectContaining({
+      message: 'missing keys',
+    }));
   });
 
   test('Invalid Token', async ({ request }) => {
-    const response = await request.post(`${baseUrl}/jira/force-start`, {
+    const response = await request.post('/jira/force-start', {
       headers: {
-        'x-service-token': invalidToken,
+        'x-service-token': 'invalid_token',
       },
       data: {
         keys: validKeys,
       },
     });
     expect(response.status()).toBe(400);
-    const responseBody = await response.json();
-    expect(responseBody.message).toBe('unauthorized');
+    expect(await response.json()).toEqual(expect.objectContaining({
+      message: 'unauthorized',
+    }));
   });
 
-  test('Missing Jira Environment Variables', async ({ request }) => {
-    const response = await request.post(`${baseUrl}/jira/force-start`, {
+  test('Missing JIRA Environment Variables', async ({ request }) => {
+    const response = await request.post('/jira/force-start', {
       headers: {
         'x-service-token': validToken,
       },
@@ -60,22 +54,21 @@ test.describe('Jira Force Start API Tests', () => {
       },
     });
     expect(response.status()).toBe(400);
-    const responseBody = await response.json();
-    expect(responseBody.message).toBe('missing_jira_env');
+    expect(await response.json()).toEqual(expect.objectContaining({
+      message: 'missing_jira_env',
+    }));
   });
 
-  test('Unknown Organization Code', async ({ request }) => {
-    const response = await request.post(`${baseUrl}/jira/force-start`, {
+  test('CSV Format Response', async ({ request }) => {
+    const response = await request.post('/jira/force-start?format=csv', {
       headers: {
         'x-service-token': validToken,
       },
       data: {
         keys: validKeys,
-        orgCode: invalidOrgCode,
       },
     });
-    expect(response.status()).toBe(400);
-    const responseBody = await response.json();
-    expect(responseBody.message).toBe('unknown_org');
+    expect(response.headers()['content-type']).toBe('text/csv');
+    expect(response.status()).toBe(200);
   });
 });

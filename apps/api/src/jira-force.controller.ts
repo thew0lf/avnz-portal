@@ -1,1 +1,84 @@
-import { BadRequestException, Controller, Post, Req, Query } from '@nestjs/common'; import { pool } from './db.js'; import { parse } from 'json2csv'; @Controller('jira') export class JiraForceController { @Post('force-start') async forceStart(@Req() req: any, @Query('format') format?: string){ const token = String(req.headers['x-service-token'] || ''); const expected = process.env.SERVICE_TOKEN || ''; if (!expected || token !== expected) throw new BadRequestException('unauthorized'); const body = req.body || {}; const keys: string[] = Array.isArray(body.keys) ? body.keys : []; if (!keys.length) throw new BadRequestException('missing keys'); const domain = process.env.JIRA_DOMAIN || ''; const email = process.env.JIRA_EMAIL || ''; const apiToken = process.env.JIRA_API_TOKEN || ''; const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || ''; if (!domain || !email || !apiToken || !orgCode) throw new BadRequestException('missing_jira_env'); const basic = Buffer.from(`${email}:${apiToken}`).toString('base64'); const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'; const c = await pool.connect(); try { const orgRow = await c.query('select id from organizations where lower(code)=lower($1) limit 1', [orgCode]); const orgId: string | undefined = orgRow.rows[0]?.id; if (!orgId) throw new BadRequestException('unknown_org'); let updatedDesc = 0, moved = 0, queued = 0; const results: any[] = []; for (const key of keys) { const issueKey = String(key || ''); const infoRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=summary,description`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } }); if (!infoRes.ok) { results.push({ key, error: `fetch_info_${infoRes.status}` }); continue; } const info: any = await infoRes.json().catch(()=>({})); const fields = info?.fields || {}; const summary = String(fields.summary || ''); const desc = fields.description; const text = typeof desc === 'string' ? desc : JSON.stringify(desc || {}); const hasSections = !!(text && text.includes('Context') && text.includes('User Story') && text.includes('Acceptance Criteria') && text.includes('Testing & QA')); if (!hasSections) { const adf = { type: 'doc', version: 1, content: [ { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'Context' }]}, { type:'paragraph', content:[{ type:'text', text:`Implement ${issueKey} per repo conventions (RBAC, soft-delete, SPA forms).` }]}, { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'User Story' }]}, { type:'paragraph', content:[{ type:'text', text:'As a developer, I want to implement this ticket according to project standards so that the feature integrates safely and predictably.' }]}, { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'Acceptance Criteria' }]}, { type:'bulletList', content:[ { type:'listItem', content:[{ type:'paragraph', content:[{ type:'text', text:'Code compiles and lints pass; tests added and passing' }]}]}, { type:'listItem', content:[{ type:'paragraph', content:[{ type:'text', text:'SUMMARY.MD updated' }]}]} ]}, { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'Testing & QA' }]}, { type:'bulletList', content:[ { type:'listItem', content:[{ type:'paragraph', content:[{ type:'text', text:'Unit tests for API/Web; QA Playwright spec for user flow' }]}]} ]} ] }; await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { method:'PUT', headers: { 'Authorization': `Basic ${basic}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { description: adf } }); } } if (format === 'csv') { const csv = parse(results); return { headers: { 'Content-Type': 'text/csv' }, body: csv }; } return { results }; } finally { c.release(); } } }
+import { BadRequestException, Controller, Post, Req, Query } from '@nestjs/common';
+import { pool } from './db.js';
+import { parse } from 'json2csv';
+
+@Controller('jira')
+export class JiraForceController {
+  @Post('force-start')
+  async forceStart(@Req() req: any, @Query('format') format?: string) {
+    const token = String(req.headers['x-service-token'] || '');
+    const expected = process.env.SERVICE_TOKEN || '';
+    if (!expected || token !== expected) throw new BadRequestException('unauthorized');
+
+    const body = req.body || {};
+    const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
+    if (!keys.length) throw new BadRequestException('missing keys');
+
+    const domain = process.env.JIRA_DOMAIN || '';
+    const email = process.env.JIRA_EMAIL || '';
+    const apiToken = process.env.JIRA_API_TOKEN || '';
+    const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
+
+    if (!domain || !email || !apiToken || !orgCode) throw new BadRequestException('missing_jira_env');
+
+    const basic = Buffer.from(`${email}:${apiToken}`).toString('base64');
+    const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000';
+    const c = await pool.connect();
+    try {
+      const orgRow = await c.query('select id from organizations where lower(code)=lower($1) limit 1', [orgCode]);
+      const orgId: string | undefined = orgRow.rows[0]?.id;
+      if (!orgId) throw new BadRequestException('unknown_org');
+
+      let updatedDesc = 0, moved = 0, queued = 0;
+      const results: any[] = [];
+
+      for (const key of keys) {
+        const issueKey = String(key || '');
+        const infoRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=summary,description`, {
+          headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' }
+        });
+        if (!infoRes.ok) {
+          results.push({ key, error: `fetch_info_${infoRes.status}` });
+          continue;
+        }
+        const info: any = await infoRes.json().catch(() => ({}));
+        const fields = info?.fields || {};
+        const summary = String(fields.summary || '');
+        const desc = fields.description;
+        const text = typeof desc === 'string' ? desc : JSON.stringify(desc || {});
+        const hasSections = !!(text && text.includes('Context') && text.includes('User Story') && text.includes('Acceptance Criteria') && text.includes('Testing & QA'));
+
+        if (!hasSections) {
+          const adf = { type: 'doc', version: 1, content: [
+            { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Context' }] },
+            { type: 'paragraph', content: [{ type: 'text', text: `Implement ${issueKey} per repo conventions (RBAC, soft-delete, SPA forms).` }] },
+            { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'User Story' }] },
+            { type: 'paragraph', content: [{ type: 'text', text: 'As a developer, I want to implement this ticket according to project standards so that the feature integrates safely and predictably.' }] },
+            { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Acceptance Criteria' }] },
+            { type: 'bulletList', content: [
+              { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Code compiles and lints pass; tests added and passing' }] }] } },
+              { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'SUMMARY.MD updated' }] }] } }
+            ] },
+            { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Testing & QA' }] },
+            { type: 'bulletList', content: [
+              { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Unit tests for API/Web; QA Playwright spec for user flow' }] }] } }
+            ] }
+          ] };
+          await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Basic ${basic}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: { description: adf } })
+          });
+        }
+      }
+
+      if (format === 'csv') {
+        const csv = parse(results);
+        return { headers: { 'Content-Type': 'text/csv' }, body: csv };
+      }
+      return { results };
+    } finally {
+      c.release();
+    }
+  }
+}
