@@ -1,4 +1,3 @@
-"use client"
 import * as React from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -15,7 +14,6 @@ export default function OrgEditForm({ org }: { org: any }){
     e.preventDefault()
     setServerError(null)
     try{
-      // basic client validation for code
       if (!name.trim()) { setServerError('Name is required'); return }
       const trimmed = code.trim()
       if (trimmed.length > 0 && !/^[a-z0-9-]{3,32}$/.test(trimmed)) { setServerError('Code must be 3-32 chars: lowercase letters, numbers, hyphens'); return }

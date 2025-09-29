@@ -62,8 +62,7 @@ export default function JiraAssignees(){
   }
 
   function parsePeople(v: string){
-    const parts = String(v||'').split(/[;,
-]+/).map(s=>s.trim()).filter(Boolean)
+    const parts = String(v||'').split(/[;,\n]+/).map(s=>s.trim()).filter(Boolean)
     return parts.map(p => {
       if (p.includes('|')) { const [name,title] = p.split('|'); return { name: name.trim(), title: (title||'').trim() } }
       const m = p.match(/^(.*)\((.*)\)$/)

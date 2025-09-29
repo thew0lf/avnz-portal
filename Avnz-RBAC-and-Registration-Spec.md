@@ -3,8 +3,6 @@
 > **Audience:** Codex CLI / implementation agents  
 > **Goal:** Implement a secure, dynamic, multi‑tenant authentication, registration, and RBAC system (no static org data) with client short codes, email/SMS invitations (Twilio), route‑level permissions, and strong auditability.
 
----
-
 ## 1) Design Goals & Constraints
 
 - **No default org shipped.** On first‑run, the **bootstrap flow** creates the **first Org** and its **OrgOwner**. Subsequent users/orgs are created via UI/API only.
@@ -17,8 +15,6 @@
 - **SMS + Email invitations.** Invites can be sent via either channel, used interchangeably, and require a contact (email or phone; either is sufficient).
 - **Multi‑factor auth (MFA) optional → recommended default.**
 - **SSO ready.** OIDC/SAML pluggable at Org or Client level.
-
----
 
 ## 2) Entity Model & Hierarchy
 
@@ -43,8 +39,6 @@ Org
 > **Note:** Students are typically `TeamContributor` in their class and `GroupContributor` (or `GroupLeader`) in their lab group.
 
 **Inheritance rule:** A role at a *higher level* implicitly grants “view and administer children” *only if* the permission is present in the role’s policy (explicit allow). Keep inheritance explicit to preserve least‑privilege and easy audits.
-
----
 
 ## 3) Registration & First‑Run Bootstrapping
 
