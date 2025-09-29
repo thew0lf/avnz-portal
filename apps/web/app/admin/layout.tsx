@@ -223,7 +223,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <MenuLink href="/admin/dashboard/slack">Slack</MenuLink>
             <MenuLink href="/admin/dashboard/tasks"><span className="inline-flex items-center gap-1"><span aria-hidden>{Icons.tasks}</span><span>Tasks</span></span></MenuLink>
             <MenuLink href="/admin/dashboard/jira">Jira</MenuLink>
-            <MenuLink href="/admin/jira-monitor">Jira Monitor</MenuLink>
+          </Section>
+          <Section title="Jira" icon={Icons.tasks}>
+            <MenuLink href="/admin/jira-monitor">Monitor</MenuLink>
+            <MenuLink href="/admin/dashboard/jira">Dashboard</MenuLink>
           </Section>
           <Section title="Tenants" icon={Icons.tenants}>
             <MenuLink href="/admin/clients">Clients</MenuLink>

@@ -363,6 +363,50 @@ export class JiraController {
     } finally { c.release() }
   }
 
+  // Requeue a single issue by key based on its current status
+  @Post('requeue/:key')
+  async requeueOne(@Req() req:any, @Param('key') key: string){
+    const orgUUID = req?.auth?.orgUUID
+    if (!orgUUID) throw new BadRequestException('unauthorized')
+    const roles: string[] = Array.isArray(req?.auth?.roles) ? req.auth.roles : []
+    if (!(roles||[]).includes('org') && !(roles||[]).includes('admin')) {
+      const perms: string[] = Array.isArray(req?.auth?.perms) ? req.auth.perms : []
+      if (!perms.includes('admin') && !perms.includes('manage_projects')) {
+        throw new ForbiddenException('insufficient permissions')
+      }
+    }
+    if (!key) throw new BadRequestException('missing key')
+    const domain = process.env.JIRA_DOMAIN || ''
+    const email = process.env.JIRA_EMAIL || ''
+    const apiToken = process.env.JIRA_API_TOKEN || ''
+    if (!domain || !email || !apiToken) return { ok: false, reason: 'missing_jira_env' }
+    const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
+    const infoRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,status,updated`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+    if (!infoRes.ok) return { ok: false, reason: 'jira_fetch_failed', status: infoRes.status }
+    const info: any = await infoRes.json().catch(()=>({}))
+    const statusName = String(info?.fields?.status?.name || '').toLowerCase()
+    let phase = ''
+    if (statusName === 'in progress' || statusName === 'blocked') phase = 'dev'
+    else if (statusName === 'in review') phase = 'review'
+    else if (statusName === 'qa testing' || statusName === 'qa') phase = 'qa'
+    if (!phase) return { ok: false, reason: 'unsupported_status', statusName }
+    const c = await pool.connect()
+    try {
+      const exists = await c.query('select 1 from jira_jobs where org_id=$1 and issue_key=$2 and deleted_at is null limit 1', [orgUUID, key])
+      if (exists.rows.length > 0) return { ok: true, queued: 0, reason: 'already_exists' }
+      const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
+      const summary = String(info?.fields?.summary || '')
+      const taskText = `[${phase.toUpperCase()} Jira ${key}] Re-run phase ${phase} for stale issue ${key}.\n\n${summary}`
+      const body = JSON.stringify({ task: taskText, meta: { org_id: orgUUID, jira_issue_key: key, phase } })
+      const rr = await fetch(`${aiBase}/agents/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
+      const jj: any = await rr.json().catch(()=>({}))
+      const jobId = jj.job_id || jj.id || null
+      if (!jobId) return { ok: false, reason: 'queue_failed', status: rr.status }
+      await c.query('insert into jira_jobs(org_id, issue_key, job_id, status) values ($1,$2,$3,$4)', [orgUUID, key, jobId, 'queued'])
+      return { ok: true, queued: 1, job_id: jobId, phase }
+    } finally { c.release() }
+  }
+
   // AI worker callback when a portal job completes (service-to-service token)
   @Post('agents-complete')
   async onAgentsComplete(@Req() req: any){
