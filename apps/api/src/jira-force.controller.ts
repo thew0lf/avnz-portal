@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Post, Req, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Post, Req, Query, ForbiddenException } from '@nestjs/common';
 
 @Controller('jira')
 export class JiraForceController {
