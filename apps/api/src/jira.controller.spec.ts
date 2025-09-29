@@ -1,8 +1,12 @@
-it('should throw BadRequestException for missing JIRA_DOMAIN', async () => {
-    process.env.JIRA_DOMAIN = '';
+it('should throw BadRequestException for missing JIRA_EMAIL', async () => {
+    process.env.JIRA_DOMAIN = 'test-domain';
+    process.env.JIRA_EMAIL = '';
     await expect(controller.forceStart({ body: { keys: ['AVNZ-1'] } })).rejects.toThrow(BadRequestException);
 });
 
-it('should throw ForbiddenException for unauthorized access', async () => {
-    await expect(controller.forceStart({ body: { keys: ['AVNZ-1'] }, headers: { authorization: '' } })).rejects.toThrow(ForbiddenException);
+it('should throw BadRequestException for missing JIRA_API_TOKEN', async () => {
+    process.env.JIRA_DOMAIN = 'test-domain';
+    process.env.JIRA_EMAIL = 'test-email';
+    process.env.JIRA_API_TOKEN = '';
+    await expect(controller.forceStart({ body: { keys: ['AVNZ-1'] } })).rejects.toThrow(BadRequestException);
 });
