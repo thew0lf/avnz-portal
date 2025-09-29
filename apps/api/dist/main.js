@@ -39,7 +39,7 @@ import { authMiddleware } from "./auth.middleware.js";
 import { rateLimitMiddleware } from "./rate-limit.middleware.js";
 import { securityHeadersMiddleware } from "./security-headers.middleware.js";
 import { routeGuardMiddleware } from "./route-guard.middleware.js";
-import { backfillInProgress } from "./jira-backfill.js";
+import { backfillInProgress, requeueStale } from "./jira-backfill.js";
 let AppModule = class AppModule {
     configure(c) { c.apply(securityHeadersMiddleware, rateLimitMiddleware, authMiddleware, routeGuardMiddleware).forRoutes("*"); }
 };
@@ -64,6 +64,12 @@ async function bootstrap() {
     if (iv > 0) {
         setInterval(() => backfillInProgress().catch(() => { }), iv * 1000);
         console.log('[jira-backfill] polling enabled every', iv, 'sec');
+    }
+    const rqIv = Number(process.env.JIRA_REQUEUE_STALE_INTERVAL_SEC || '0');
+    const rqMin = Number(process.env.JIRA_REQUEUE_STALE_MINUTES || '30');
+    if (rqIv > 0) {
+        setInterval(() => requeueStale(rqMin).catch(() => { }), rqIv * 1000);
+        console.log('[jira-requeue-stale] polling enabled every', rqIv, 'sec', 'mins=', rqMin);
     }
 }
 bootstrap();

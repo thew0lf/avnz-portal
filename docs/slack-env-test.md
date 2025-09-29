@@ -1,0 +1,1 @@
+Slack env test by Avnz Bot.
