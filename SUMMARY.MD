@@ -936,6 +936,10 @@ Update 2025-09-28 (Bots Workflow)
 - Worker enhancements: phase‑specific checks
   - Review: runs `scripts/lint.sh` (when present) to assist Sr Dev review; results reported back to Jira in the job comment.
   - QA: performs HTTP sanity checks (API `/health`, Web `/login`) to validate responsiveness; results included in Jira comments.
+- Kickback logic:
+  - If Review checks fail (lint), the worker queues a Dev kickback job and the API returns the issue to “In Progress” with label `review-failed`.
+  - If QA checks fail (API/Web not healthy), the worker queues a Dev kickback job and the API returns the issue to “In Progress” with label `qa-failed`.
+  - On pass, the ticket transitions forward (Dev/Review → “QA Testing”; QA/Test → “Done”).
 
 Update 2025-09-28 (Jira Monitor & Stale Requeue)
 - API (JiraController):
@@ -948,3 +952,8 @@ Update 2025-09-28 (Jira Monitor & Stale Requeue)
 Update 2025-09-28 (Automation Mandate)
 - Policy: Add as much safe, auditable bot automation as possible. Target areas: Jira triggers (queue, requeue), phase orchestration (dev→review→qa→...), PR gating, doc updates, and monitoring. All automation must be env-gated and observable via Admin pages.
 - Defaults: Enabled auto-requeue every 5 minutes via `JIRA_REQUEUE_STALE_INTERVAL_SEC=300` (local dev). Threshold `JIRA_REQUEUE_STALE_MINUTES=30`.
+
+Update 2025-09-29 (Web — Build fix)
+- Fixed Next.js build error caused by an unterminated regex literal in Jira assignees parser.
+- Files: `apps/web/app/admin/dashboard/jira/JiraAssignees.tsx` (regex consolidated to single line: `split(/[;,\n]+/)`).
+- Behavior: Web compiles successfully; parsing supports commas, semicolons, and newlines between assignees.

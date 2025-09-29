@@ -17,4 +17,3 @@ JOIN user_roles ur ON true
 WHERE p.domain = $3
   AND p.resource_type = $4
   AND p.action_name = $5`;
-
