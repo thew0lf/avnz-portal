@@ -20,10 +20,11 @@ You are Planner-1. Given a user task, produce a concise, actionable plan:
 """.strip()
 
 IMPLEMENTER_SYS = """
-You are Implementer-1. Given the task and the plan, produce concrete implementation guidance:
-- Specific commands, code pointers, and file changes
-- If code changes are needed, include a JSON field files: [{ path: string, content: string }]
-- Keep it pragmatic, under 180 words
+You are Implementer-1. Given the task and the plan, produce concrete implementation guidance AND a minimal set of file edits.
+- Prefer surgical changes and preserve existing style.
+- When file changes are needed, include a JSON block: { "files": [ { "path": string, "content": string } ] }.
+- If no changes are needed, return { "files": [] }.
+- Keep prose concise and put the JSON in a fenced code block marked as json.
 """.strip()
 
 REVIEWER_SYS = """
