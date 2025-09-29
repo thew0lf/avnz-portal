@@ -7,5 +7,10 @@ describe('GET /api/rps/customers', () => {
     await GET(req, res);
     expect(res._getStatusCode()).toBe(401);
   });
-  // Additional tests for successful response and error handling
+  it('returns successful response for valid token', async () => {
+    const { req, res } = createMocks({ method: 'GET', headers: { authorization: 'Bearer valid_token' } });
+    await GET(req, res);
+    expect(res._getStatusCode()).toBe(200);
+  });
+  // Additional tests for error handling
 });

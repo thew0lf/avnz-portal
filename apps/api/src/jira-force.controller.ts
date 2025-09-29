@@ -53,17 +53,11 @@ export class JiraForceController {
               ]}
             ]
           }
-          await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { method:'PUT', headers: { 'Authorization': `Basic ${basic}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { description: adf } }) });
-          updatedDesc++;
+          await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { method:'PUT', headers: { 'Authorization': `Basic ${basic}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { description: adf } });
         }
-        // Transition to In Progress
       }
-      if (format === 'csv') {
-        // Convert results to CSV format
-        const csvResults = results.map(row => Object.values(row).join(',')).join('\n');
-        return { statusCode: 200, body: csvResults, headers: { 'Content-Type': 'text/csv' } };
-      }
-      return { statusCode: 200, body: results };
-    } finally { c.release(); }
+    } finally {
+      c.release();
+    }
   }
 }
