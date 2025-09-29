@@ -77,6 +77,12 @@ Git hooks (optional but recommended)
   - Walkthrough (non-destructive): `bash scripts/walkthrough.sh`
 - If any check fails, run a full reset and rebuild (see “Full Reset & Health Check”), fix issues, and retry.
 
+## Bot Workflow
+- Branching: create a ticket branch from `main` using `design-2/AVNZ-10/AVNZ-###`.
+- Start work: run `scripts/agents/start-ticket.sh AVNZ-###` to fetch Jira context (if configured) and start the orchestrator.
+- Commit style: start messages with `AVNZ-###: ...`.
+- Guardrails: enable hooks via `git config core.hooksPath .githooks` to block vendor/build artifacts and >50MB files.
+- Open PR (bots): only after code-complete and checks pass. Use `scripts/git/auto-pr-when-done.sh AVNZ-###` which will add an empty `AVNZ-###: Code complete` commit if needed and open the PR.
 ## Full Reset & Health Check (Local)
 If your database or migrations get out of sync, perform a clean reset and verify health.
 

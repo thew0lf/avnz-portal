@@ -928,3 +928,7 @@ Update 2025-09-27 (Web — RPS pages fetch fix)
   - `apps/web/app/admin/dashboard/rps/transactions/page.tsx`
   - `apps/web/app/admin/dashboard/rps/customers/page.tsx`
 - No API changes or migrations; resolves "Failed to parse URL" in Node server runtime.
+Update 2025-09-28 (Bots Workflow)
+- Added `scripts/agents/start-ticket.sh` to bootstrap bot work on a ticket by pulling Jira summary/description (if configured) and invoking the AI orchestrator with a task prompt aligned to repo conventions.
+- Added `scripts/git/auto-pr-when-done.sh` for gated PR creation that ensures a `AVNZ-###: Code complete` commit exists at PR time.
+- Default bot behavior: `AUTO_PR_WHEN_DONE=1` (configurable).
