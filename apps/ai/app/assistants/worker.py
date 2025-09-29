@@ -35,6 +35,38 @@ def main():
             try:
                 meta = job.get("meta") or {}
                 out = run_roundtable(task, meta)
+                # Phase-specific automated checks to assist Sr Dev review and QA
+                try:
+                    phase = (meta or {}).get("phase") or "dev"
+                    def _run_cmd(cmd: str, cwd: str = "/workspace", timeout: int = 60):
+                        try:
+                            p = subprocess.run(shlex.split(cmd), cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout, text=True)
+                            return {"ok": p.returncode == 0, "code": p.returncode, "output": p.stdout[-5000:]}
+                        except Exception as e:
+                            return {"ok": False, "code": -1, "output": str(e)}
+                    def _http_get(url: str, timeout: int = 4):
+                        try:
+                            with urllib.request.urlopen(url, timeout=timeout) as r:
+                                return {"ok": 200 <= r.status < 400, "status": r.status}
+                        except Exception as e:
+                            return {"ok": False, "error": str(e)}
+                    if phase == "review":
+                        # Run lint to aid Sr Dev reviewers when available
+                        res = _run_cmd("bash scripts/lint.sh", timeout=120)
+                        if isinstance(out, dict):
+                            out["review_checks"] = {"lint": res}
+                    if phase == "qa":
+                        # Lightweight QA sanity checks via HTTP
+                        api_base = os.getenv("API_BASE_INTERNAL", "http://api:3001")
+                        web_base = os.getenv("WEB_BASE_INTERNAL", "http://web:3000")
+                        checks = {
+                            "api_health": _http_get(f"{api_base}/health"),
+                            "web_login": _http_get(f"{web_base}/login"),
+                        }
+                        if isinstance(out, dict):
+                            out["qa_checks"] = checks
+                except Exception:
+                    pass
                 # Optional: apply code changes if provided (forced via meta or returned by model)
                 try:
                     files = None
