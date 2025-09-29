@@ -7,7 +7,6 @@ import { useToast } from '@/components/ui/toast-provider'
 export default function BackfillButton(){
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  // lightweight toast hook; fallback alert
   const { toast } = useToast?.() || { toast: (o:any)=> alert(o?.title||'Done') }
   async function run(){
     setLoading(true)
@@ -23,4 +22,3 @@ export default function BackfillButton(){
     <Button onClick={run} disabled={loading}>{loading? 'Queuing...' : 'Queue In‑Progress'}</Button>
   )
 }
-

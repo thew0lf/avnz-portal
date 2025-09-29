@@ -14,7 +14,6 @@ function timingSafeEqual(a: string, b: string){
 
 @Controller('jira')
 export class JiraController {
-  // Resolve a phase assignee name from org-scoped service configs or env
   private async getPhaseAssigneeName(phase: string, orgId?: string): Promise<string|undefined> {
     try {
       if (orgId) {
@@ -37,22 +36,17 @@ export class JiraController {
     return undefined
   }
 
-  // Accept CSV/semicolon/whitespace-separated list; do round-robin across names using Redis.
   private async pickFromList(listVal: string, orgId: string|undefined, phase: string): Promise<string|undefined> {
     const raw = String(listVal || '')
     const parts = raw.split(/[;,
 ]+/).map(s => s.trim()).filter(Boolean)
     if (parts.length === 0) return undefined
     if (parts.length === 1) return parts[0]
-    // try RR via Redis; else random
-    // Simplified: no Redis dependency here; fallback to pseudo round-robin via random
     return parts[Math.floor(Math.random() * parts.length)]
   }
 
   private async chooseAssigneeForPhase(phase: string, orgId: string|undefined, domain: string, basic: string): Promise<{ name?: string, accountId?: string }|undefined> {
-    // Build exclusion list: never auto-assign to CTO or configured excludes
     const exclude = await this.getAssignmentExclude(orgId)
-    // Prefer service config list, then env list/single
     let rawList = ''
     try {
       if (orgId) {
@@ -76,7 +70,6 @@ export class JiraController {
       const acct = await this.resolveAccountId(names[0], domain, basic)
       return acct ? { name: names[0], accountId: acct } : undefined
     }
-    // Load-balance by least open issues in project; fallback to RR
     let doLB = (process.env.JIRA_LOAD_BALANCE||'1') === '1'
     try {
       if (orgId) {
@@ -93,8 +86,7 @@ export class JiraController {
         if (!acct) { counts.push({ name:n, open: 1e9 }); continue }
         try {
           const jql = encodeURIComponent(`project = ${project} AND assignee = ${acct} AND statusCategory != Done`)
-          // Further implementation here
-        } catch {}
+        }
       }
     }
   }
