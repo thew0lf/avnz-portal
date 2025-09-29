@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api'
 import Link from 'next/link'
 import { DashboardUsageChart, DashboardMetrics } from './DashboardUsage'
 import OutboxStats from './OutboxStats'
+import JiraStaleStats from './JiraStaleStats'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 export default async function AdminHome() {
@@ -72,6 +73,7 @@ export default async function AdminHome() {
             </CardContent>
           </Card>
           <OutboxStats />
+          <JiraStaleStats />
         </div>
       </div>
     </div>
