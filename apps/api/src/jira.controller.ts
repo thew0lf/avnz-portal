@@ -1,6 +1,7 @@
 import { BadRequestException, Controller, Get, Post, Query, Req, Param, ForbiddenException } from '@nestjs/common'
 import crypto from 'node:crypto'
 import { pool } from './db.js'
+import { jiraOps } from './jira-backfill.js'
 import { getServiceConfig } from './service-config.js'
 
 function timingSafeEqual(a: string, b: string){
@@ -309,6 +310,16 @@ export class JiraController {
       }))
       return { rows }
     } catch { return { rows: [] } }
+  }
+
+  // Simple health snapshot of Jira automation (backfill/requeue)
+  @Get('health')
+  async health(){
+    const h = jiraOps
+    return {
+      backfill: { at: h.backfill.at, queued: h.backfill.queued, ok: h.backfill.ok },
+      requeue: { at: h.requeue.at, queued: h.requeue.queued, ok: h.requeue.ok },
+    }
   }
 
   // List stale Jira issues (statusCategory != Done and not updated within N minutes)

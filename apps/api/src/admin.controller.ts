@@ -65,9 +65,24 @@ export class AdminController {
 
   // Budget
   @Get('budget') @Authz({ action:'configure', domain:'node', resourceType:'org', resourceParam:'nodeId' })
-  async getBudget(@Query('nodeId') nodeId?: string){ const c=await pool.connect(); try{ const r=await c.query('select monthly_limit_usd from budgets where org_id=$1',[nodeId]); return { monthly_limit_usd: r.rows[0]?.monthly_limit_usd || 0 } } finally { c.release() } }
+  async getBudget(@Query('nodeId') nodeId?: string){
+    const id = String(nodeId||'').trim()
+    if (!id || !/^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$/i.test(id)) {
+      throw new BadRequestException('missing_or_invalid_nodeId')
+    }
+    const c=await pool.connect();
+    try{ const r=await c.query('select monthly_limit_usd from budgets where org_id=$1',[id]); return { monthly_limit_usd: r.rows[0]?.monthly_limit_usd || 0 } } finally { c.release() }
+  }
   @Post('budget') @Authz({ action:'configure', domain:'node', resourceType:'org', resourceParam:'nodeId' })
-  async setBudget(@Query('nodeId') nodeId?:string, @Body() b?:any){ const limit = Number(b?.monthly_limit_usd || 0); const c=await pool.connect(); try{ await c.query('insert into budgets(org_id, monthly_limit_usd) values ($1,$2) on conflict (org_id) do update set monthly_limit_usd=excluded.monthly_limit_usd, updated_at=now()',[nodeId, limit]); return { ok:true } } finally { c.release() } }
+  async setBudget(@Query('nodeId') nodeId?:string, @Body() b?:any){
+    const id = String(nodeId||'').trim()
+    if (!id || !/^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$/i.test(id)) {
+      throw new BadRequestException('missing_or_invalid_nodeId')
+    }
+    const limit = Number(b?.monthly_limit_usd || 0);
+    const c=await pool.connect();
+    try{ await c.query('insert into budgets(org_id, monthly_limit_usd) values ($1,$2) on conflict (org_id) do update set monthly_limit_usd=excluded.monthly_limit_usd, updated_at=now()',[id, limit]); return { ok:true } } finally { c.release() }
+  }
   // Roles
   @Get('roles') @Authz({ action:'configure', domain:'node', resourceType:'org', resourceParam:'nodeId' }) async listRoles(@Query('nodeId') _nodeId?:string, @Query('q') q?:string, @Query('limit') limit?:string, @Query('offset') offset?:string, @Query('include_deleted') includeDeleted?: string){ const c=await pool.connect(); try{ const lim=Math.max(1, Math.min(200, Number(limit||'20'))); const off=Math.max(0, Number(offset||'0')); let sql='select id,name,level,deleted_at from authz.roles'; const args:any[]=[]; const cond:string[]=[]; if (!String(includeDeleted||'').match(/^(1|true)$/i)) cond.push('deleted_at is null'); if (q){ args.push(`%${q.toLowerCase()}%`); cond.push(`lower(name) like $${args.length}`) } if (cond.length) sql+=' where '+cond.join(' and '); sql+=' order by level desc limit '+lim+' offset '+off; const r=await c.query(sql,args); return { rows:r.rows, limit: lim, offset: off, q: q||'', include_deleted: !!String(includeDeleted||'').match(/^(1|true)$/i) } } finally{ c.release() } }
   @Post('roles') @Authz({ action:'configure', domain:'node', resourceType:'org', resourceParam:'nodeId' }) async createRole(@Body() b:any, @Query('nodeId') _nodeId?:string, @Param() _p?:any, @Query() _q?:any, @Body() _body2?:any, req?:any){ const { id,name,level }=b||{}; if(!name||typeof level!=='number') throw new BadRequestException('name, level required'); const c=await pool.connect(); try{ const r=await c.query('insert into authz.roles(id,name,level) values (coalesce($1,gen_random_uuid()),$2,$3) returning id,name,level',[id||null,name,level]); await audit(req as any,'create','authz.role',r.rows[0]?.id,null,r.rows[0]); return r.rows[0] } finally{ c.release() } }

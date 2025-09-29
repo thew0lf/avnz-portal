@@ -19,11 +19,12 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
 
   const minutes = Number(searchParams?.minutes || '30')
 
-  const [loadRes, eventsRes, staleRes, jobsRes] = await Promise.all([
+  const [loadRes, eventsRes, staleRes, jobsRes, healthRes] = await Promise.all([
     apiFetch('/jira/assignees/load'),
     apiFetch('/jira/events?limit=50'),
     apiFetch(`/jira/stale?minutes=${minutes}`),
     apiFetch('/jira/jobs?limit=50'),
+    apiFetch('/jira/health'),
   ])
   const load = await loadRes.json().catch(()=>({ rows: [] }))
   const events = await eventsRes.json().catch(()=>({ rows: [] }))
@@ -33,6 +34,8 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
   const rowsEvents = events.rows || []
   const rowsStale = stale.issues || []
   const rowsJobs = jobsRes.ok ? (await jobsRes.json().catch(()=>({ rows: [] }))).rows || [] : []
+  const health = healthRes.ok ? (await healthRes.json().catch(()=>({}))) : {}
+  function fmt(ts?: number){ if(!ts) return '—'; try{ return new Date(ts).toLocaleString() }catch{ return '—' } }
 
   return (
     <main className="p-6 space-y-6">
@@ -72,3 +75,18 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
     </main>
   )
 }
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Jira Automation Health</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0 text-sm grid md:grid-cols-2 gap-3">
+          <div>
+            <div className="text-muted-foreground">Last Backfill</div>
+            <div>{fmt(health?.backfill?.at)} {health?.backfill?.ok === false ? <span className="text-red-600">(failed)</span> : ''}</div>
+            <div className="text-xs text-muted-foreground">Queued: {health?.backfill?.queued ?? 0}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Last Requeue</div>
+            <div>{fmt(health?.requeue?.at)} {health?.requeue?.ok === false ? <span className="text-red-600">(failed)</span> : ''}</div>
+            <div className="text-xs text-muted-foreground">Queued: {health?.requeue?.queued ?? 0}</div>
+          </div>
+        </CardContent>
+      </Card>

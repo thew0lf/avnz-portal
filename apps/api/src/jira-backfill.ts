@@ -1,5 +1,10 @@
 import { pool } from './db.js'
 
+export const jiraOps = {
+  backfill: { at: 0, queued: 0, ok: null as null | boolean },
+  requeue: { at: 0, queued: 0, ok: null as null | boolean },
+}
+
 export async function backfillInProgress(){
   const domain = process.env.JIRA_DOMAIN || ''
   const email = process.env.JIRA_EMAIL || ''
@@ -9,6 +14,7 @@ export async function backfillInProgress(){
   const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
   if (!domain || !email || !apiToken || !orgCode) {
     console.log('[jira-backfill] missing config; skip', { hasDomain: !!domain, hasEmail: !!email, hasToken: !!apiToken, orgCode })
+    jiraOps.backfill.at = Date.now(); jiraOps.backfill.ok = false; jiraOps.backfill.queued = 0
     return { ok: false, reason: 'missing_config' }
   }
   const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
@@ -57,6 +63,7 @@ export async function backfillInProgress(){
       startAt += issues.length
       if (startAt >= (data.total || 0)) break
     }
+    jiraOps.backfill.at = Date.now(); jiraOps.backfill.ok = true; jiraOps.backfill.queued = queued
     return { ok: true, total, queued, failed }
   } finally { c.release() }
 }
@@ -70,6 +77,7 @@ export async function requeueStale(minutes: number = 30){
   const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
   if (!domain || !email || !apiToken || !orgCode) {
     console.log('[jira-requeue-stale] missing config; skip', { hasDomain: !!domain, hasEmail: !!email, hasToken: !!apiToken, orgCode })
+    jiraOps.requeue.at = Date.now(); jiraOps.requeue.ok = false; jiraOps.requeue.queued = 0
     return { ok: false, reason: 'missing_config' }
   }
   const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
@@ -81,7 +89,7 @@ export async function requeueStale(minutes: number = 30){
     if (!orgId) { console.log('[jira-requeue-stale] unknown orgCode', orgCode); return { ok:false, reason:'unknown_org' } }
     const url = `https://${domain}/rest/api/3/search?jql=${jql}&maxResults=100&fields=summary,status,updated,assignee`
     const r = await fetch(url, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
-    if (!r.ok) { console.log('[jira-requeue-stale] jira search failed', r.status); return { ok:false, reason:'jira_search_failed', status: r.status } }
+    if (!r.ok) { console.log('[jira-requeue-stale] jira search failed', r.status); jiraOps.requeue.at = Date.now(); jiraOps.requeue.ok = false; jiraOps.requeue.queued = 0; return { ok:false, reason:'jira_search_failed', status: r.status } }
     const data: any = await r.json().catch(()=>({ issues: [] }))
     let queued = 0
     for (const it of (data.issues||[])){
@@ -105,6 +113,7 @@ export async function requeueStale(minutes: number = 30){
         if (jobId) { await c.query('insert into jira_jobs(org_id, issue_key, job_id, status) values ($1,$2,$3,$4)', [orgId, key, jobId, 'queued']); queued++ }
       } catch {}
     }
+    jiraOps.requeue.at = Date.now(); jiraOps.requeue.ok = true; jiraOps.requeue.queued = queued
     return { ok: true, queued }
   } finally { c.release() }
 }
