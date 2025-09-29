@@ -83,3 +83,22 @@ curl -s -X GET   -H "Authorization: Basic $(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN
 - **Administrators** → Emma Johansson (PM), Raj Patel (Scrum Master)  
 - **Developers** → Lucas Meyer, Carlos Hernández, Sophia Li, David O’Connor, Aisha Khan, Mateo Rossi, Hannah Wright, Nguyen Minh, Olivia Brown  
 - **QA** → Fatima El-Sayed, 
+
+## 🧪 QA Bots: Tools & Responsibilities
+
+QA bots participate after Dev and Review phases and can kick work back to Dev when checks fail.
+
+- Tools
+  - Playwright (TypeScript) for end-to-end tests under `apps/web/tests/e2e/*.spec.ts`.
+  - HTTP sanity checks: API `/health`, Web `/login` to verify responsiveness.
+  - Repo scripts: `scripts/health-check.sh`, `scripts/smoke-test.sh`, `scripts/walkthrough.sh`, `scripts/api-test.sh`.
+  - Helpers: `scripts/qa-playwright.sh` (runs Playwright in the web container), `scripts/qa-unit.sh` (runs repo test scripts).
+
+- Responsibilities
+  - Dev bot: implement feature and include unit tests for API/Web changes. Place tests adjacent to the code (e.g., `apps/api/src/**/*.spec.ts`, `apps/web/**/*.test.tsx`).
+  - Sr Dev Review bot: runs lint to assist reviewers; flags missing tests and risky changes.
+  - QA bot: generate a Playwright spec for the user story and include it in the change set. Run HTTP checks and, in CI/local, execute `qa-playwright.sh` and `qa-unit.sh`.
+  - Kickback: If Review (lint) or QA (checks/tests) fail, the ticket returns to “In Progress” with labels `review-failed` or `qa-failed`. Dev addresses issues and advances again.
+
+- CI Integration (suggested)
+  - Add CI jobs to run `scripts/qa-unit.sh` and `scripts/qa-playwright.sh` on PRs touching Web/API. Publish Playwright reports and fail the build on regressions.
