@@ -258,6 +258,11 @@ Update 2025-09-27 (Jira Backlog)
 - No code/runtime changes. Purpose is to queue work via the tasks menu/Jira without impacting services.
 
 Update 2025-09-27 (Jira RPS automation)
+Update 2025-09-28 (Repo Hygiene Hooks)
+- Added Git hooks to enforce repo hygiene locally:
+  - `pre-commit`: runs lint; blocks committing `node_modules/`, `.next/`, and files > 50MB.
+  - `pre-push`: blocks pushing when `HEAD` contains `node_modules/`, `.next/`, or files > 50MB.
+- Enable with `git config core.hooksPath .githooks`. README updated under "Git hooks".
 - Added `scripts/jira-import-rps.sh` to programmatically create the RPS Epic and child tasks in Jira (project `AVNZ`) and assign them to Emma Johansson.
 - Implementation notes:
   - Uses Basic auth with `JIRA_EMAIL`/`JIRA_API_TOKEN`/`JIRA_DOMAIN`.

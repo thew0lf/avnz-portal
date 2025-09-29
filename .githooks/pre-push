@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-push] Running repo hygiene checks..."
+
+MAX_BYTES=$((50 * 1024 * 1024))
+
+if git ls-files | grep -E '(^|/)node_modules/|(^|/)\.next/' >/dev/null 2>&1; then
+  echo "[pre-push] ERROR: Tracked files under node_modules/ or .next/ detected. Remove them before pushing."
+  exit 1
+fi
+
+large_files=$(git ls-tree -r -l HEAD | awk -v max="$MAX_BYTES" '$4 ~ /^-/ && $3 ~ /^[0-9]+$/ { if ($3 > max) print $4" ("$3" bytes)" }')
+if [ -n "$large_files" ]; then
+  echo "[pre-push] ERROR: Large files (>50MB) in HEAD:"
+  echo "$large_files"
+  echo "Use Git LFS or remove them from history."
+  exit 1
+fi
+
+echo "[pre-push] Hygiene checks passed."
+
