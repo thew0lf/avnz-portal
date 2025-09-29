@@ -940,3 +940,7 @@ Update 2025-09-28 (Jira Monitor & Stale Requeue)
   - Existing endpoints used by UI: `GET /jira/events`, `GET /jira/assignees/load`.
 - Web UI: new admin page `/admin/jira-monitor` (Dashboard → Jira Monitor) showing Assignee Load, Stale Issues (with Requeue All), and Recent Jira Events. Uses shadcn cards and DataTable, matching Clients page scaffolding.
 - Env: `.env.example` now includes Jira automation/monitoring vars (`JIRA_EMAIL`, `JIRA_DOMAIN`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`, `JIRA_DEFAULT_ORG_CODE`, `JIRA_BACKFILL_*`, etc.).
+
+Update 2025-09-28 (Automation Mandate)
+- Policy: Add as much safe, auditable bot automation as possible. Target areas: Jira triggers (queue, requeue), phase orchestration (dev→review→qa→...), PR gating, doc updates, and monitoring. All automation must be env-gated and observable via Admin pages.
+- Defaults: Enabled auto-requeue every 5 minutes via `JIRA_REQUEUE_STALE_INTERVAL_SEC=300` (local dev). Threshold `JIRA_REQUEUE_STALE_MINUTES=30`.
