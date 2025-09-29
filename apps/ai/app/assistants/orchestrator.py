@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 from typing import List, Dict, Any, Optional, Tuple
+import json as _json
+import re as _re
 
 from openai import OpenAI
 import tiktoken
@@ -86,6 +88,95 @@ def chat_with_usage(client: OpenAI, model: str, system: str, user: str):
     return content, int(in_tok), int(out_tok)
 
 
+def _extract_files_from_text(text: str) -> Optional[List[Dict[str, str]]]:
+    """Best‑effort extractor for a structured files list from LLM output.
+    Looks for JSON code blocks or an object containing a top‑level `files` array,
+    or a bare array of { path, content } objects. Returns None if not found.
+    """
+    if not text:
+        return None
+    # 1) Try fenced code blocks first
+    for m in _re.finditer(r"```(json)?\s*([\s\S]*?)```", text, flags=_re.IGNORECASE):
+        block = m.group(2).strip()
+        try:
+            obj = _json.loads(block)
+            if isinstance(obj, dict) and isinstance(obj.get('files'), list):
+                files = obj['files']
+            elif isinstance(obj, list):
+                files = obj
+            else:
+                files = None
+            if isinstance(files, list):
+                out = []
+                for it in files:
+                    if isinstance(it, dict) and 'path' in it and 'content' in it:
+                        out.append({'path': str(it['path']), 'content': str(it['content'])})
+                if out:
+                    return out
+        except Exception:
+            continue
+    # 2) Fallback: search for a JSON object/array substring
+    try:
+        # Find the first '{' or '[' and try to parse until matching bracket
+        start = min([i for i in [text.find('{'), text.find('[')] if i != -1], default=-1)
+        if start != -1:
+            snippet = text[start:]
+            # Heuristic trim
+            for end in range(len(snippet), max(start+2, len(snippet)-1), -1):
+                try:
+                    obj = _json.loads(snippet[:end])
+                    if isinstance(obj, dict) and isinstance(obj.get('files'), list):
+                        files = obj['files']
+                    elif isinstance(obj, list):
+                        files = obj
+                    else:
+                        files = None
+                    if isinstance(files, list):
+                        out = []
+                        for it in files:
+                            if isinstance(it, dict) and 'path' in it and 'content' in it:
+                                out.append({'path': str(it['path']), 'content': str(it['content'])})
+                        if out:
+                            return out
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return None
+
+def _request_files_only(client: OpenAI, model: str, task: str, plan_text: str, impl_text: str, code_ctx: str) -> Optional[List[Dict[str, str]]]:
+    system = (
+        "You are Code Writer. Respond with ONLY valid JSON matching this schema: "
+        "{ \"files\": [ { \"path\": string, \"content\": string } ] }. "
+        "Do not include markdown, comments, or prose."
+    )
+    user = (
+        "Task: " + task + "\n\n"
+        "Plan:\n" + plan_text + "\n\n"
+        "Implementation (notes):\n" + impl_text + "\n\n"
+        + ("Relevant code context:\n" + code_ctx if code_ctx else "") + "\n\n"
+        "Create or update the minimal set of files to implement the task."
+    )
+    r = client.chat.completions.create(
+        model=model,
+        messages=[{"role":"system","content":system},{"role":"user","content":user}],
+        temperature=0.0,
+    )
+    content = r.choices[0].message.content or ""
+    try:
+        obj = _json.loads(content)
+        files = obj.get('files') if isinstance(obj, dict) else None
+        if isinstance(files, list):
+            out = []
+            for it in files:
+                if isinstance(it, dict) and 'path' in it and 'content' in it:
+                    out.append({'path': str(it['path']), 'content': str(it['content'])})
+            return out or None
+    except Exception:
+        pass
+    # Also try extracting if the model wrapped JSON accidentally
+    return _extract_files_from_text(content)
+
 def _collect_code_context(task: str, root: str = "/workspace", limit_files: int = 8, max_bytes: int = 4000) -> str:
     try:
         import re, os
@@ -141,7 +232,7 @@ def run_roundtable(task: str, meta: Optional[Dict[str, Any]] = None) -> Dict[str
     rev_text, r_in, r_out = chat_with_usage(client, model, prompts["reviewer"], rev_user)
     total_in = p_in + i_in + r_in
     total_out = p_out + i_out + r_out
-    result = {
+    result: Dict[str, Any] = {
         "plan": plan_text,
         "implementation": impl_text,
         "review": rev_text,
@@ -157,6 +248,19 @@ def run_roundtable(task: str, meta: Optional[Dict[str, Any]] = None) -> Dict[str
             }
         }
     }
+    # Try to extract structured files from implementer output for auto‑apply by worker
+    try:
+        files = _extract_files_from_text(impl_text)
+        if files:
+            result['files'] = files
+        else:
+            # Retry with files‑only instruction
+            retry_files = _request_files_only(client, model, task, plan_text, impl_text, code_ctx)
+            if retry_files:
+                result['files'] = retry_files
+    except Exception:
+        pass
+
     # Optionally, post usage to API if configured
     api_base = os.getenv('API_BASE_INTERNAL', 'http://api:3001')
     try:

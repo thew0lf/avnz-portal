@@ -932,6 +932,7 @@ Update 2025-09-28 (Bots Workflow)
 - Added `scripts/agents/start-ticket.sh` to bootstrap bot work on a ticket by pulling Jira summary/description (if configured) and invoking the AI orchestrator with a task prompt aligned to repo conventions.
 - Added `scripts/git/auto-pr-when-done.sh` for gated PR creation that ensures a `AVNZ-###: Code complete` commit exists at PR time.
 - Default bot behavior: `AUTO_PR_WHEN_DONE=1` (configurable).
+- Orchestrator now extracts `files` from Implementer output and retries with a "JSON‑only files" instruction if absent, enabling the worker to auto‑apply code changes reliably.
 
 Update 2025-09-28 (Jira Monitor & Stale Requeue)
 - API (JiraController):

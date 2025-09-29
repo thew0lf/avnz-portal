@@ -83,6 +83,7 @@ services:
       OPENAI_PROJECT: ${OPENAI_PROJECT:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      AGENTS_WORKER_AUTO: ${AGENTS_WORKER_AUTO:-1}
     ports: ["8000:8000"]
     volumes:
       - ./apps/ai:/app
