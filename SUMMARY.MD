@@ -243,12 +243,13 @@ Update 2025-09-28 (Branching & Merge Policy)
   - Controlled by `GIT_WORK_BRANCH` (default `design-2`).
   - Epic: `<GIT_WORK_BRANCH>/<EPIC_KEY>` (e.g., `design-2/AVNZ-10`).
   - Child tickets: `<GIT_WORK_BRANCH>/<EPIC_KEY>/<TICKET_KEY>` (e.g., `design-2/AVNZ-10/AVNZ-12`).
-- Flow:
-  - Bots write code, commit, and open PRs to `main` (or configured base).
+ - Flow:
+  - Bots write code and commit to the ticket branch. Do NOT open PRs until the assigned bot marks the ticket "Code Complete" and all pre‑push checks pass. No draft PRs.
   - QA bots must pass (health/smoke/tests) before merge. Tickets require: Context, concrete User Story, AC, Testing & QA.
   - When child tickets under an epic are done and QA‑approved, merge child PRs into the epic branch; when all children are done, merge the epic branch into `design2`.
-- Config:
-  - Enable auto‑commit/PR via env: `AUTO_COMMIT=1`, `GIT_REMOTE_URL`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GIT_MAIN_BRANCH`.
+ - Config:
+  - Auto‑commit enabled via env: `AUTO_COMMIT=1`, `GIT_REMOTE_URL`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GIT_MAIN_BRANCH`.
+  - PR creation is gated: `AUTO_PR_WHEN_DONE=1` (default) opens a PR only after the assigned bot completes code and pre‑push checks are green. Set `AUTO_PR_WHEN_DONE=0` to require manual PR creation.
 
 Update 2025-09-27 (Jira Backlog)
 - Added Jira bulk-import CSV derived from SUMMARY.MD, TODOS.md, and RPS_TASK.md for Product Owner triage and parallel execution.

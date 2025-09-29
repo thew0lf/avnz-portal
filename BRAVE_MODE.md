@@ -39,8 +39,8 @@ SLACK_REFRESH_TOKEN=      # for token refresh flow
 
 ## 🔄 Promptless Flow Overview
 
-1. **Dev starts work** → pushes commit with `AVNZ-###` → Jira auto-transitions **To Do → In Progress**.  
-2. **PR opened** → Jira moves **In Progress → 1st Review** and assigns **First Reviewer**.  
+1. **Dev/Bot starts work** → pushes commit with `AVNZ-###` → Jira auto-transitions **To Do → In Progress**.  
+2. **Code complete (assigned bot)** → After the assigned bot finishes the ticket and local checks pass (lint, health, smoke, walkthrough, hooks), the PR is opened. Jira then moves **In Progress → 1st Review** and assigns **First Reviewer**.  
 3. **Tech lead approval** → Jira moves **1st Review → Sr Dev Review**.  
 4. **PR merged / build green** → Jira moves **Sr Dev Review → QA** and assigns **QA Assignee**.  
 5. **QA passes** → Jira moves **QA → Done**, adds closing comment, and Slack announces.  

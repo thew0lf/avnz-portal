@@ -27,6 +27,7 @@ Key conventions
     - Do not ask the user to run Docker commands; automatically run required `docker compose` build/up/down/logs/exec commands to validate and apply changes.
     - Still explicitly call out and confirm destructive actions (e.g., volume prune/data wipes, force pushes) unless the user has already consented within the session context.
   - Cautious Mode (Opt-in): Ask before actions that could affect developer state or data. Use when the user explicitly requests a more conservative workflow.
+  - PR Creation Policy (All Modes): Bots must not open PRs for a ticket until the assigned bot has completed the code and local checks pass (lint, health, smoke, walkthrough, hooks). Do not create draft PRs. Branches may be updated with commits during development; PRs are created only on "Code Complete".
 - Tooling & runtime
   - Docker is the local orchestrator. Agents may run `docker compose` commands (build, up, down, logs, exec) when needed to build, reset, or verify services.
   - Prefer containerized workflows; do not assume host Node/Python are installed.
@@ -43,6 +44,7 @@ Key conventions
   - In planning/updates, include the issue key for traceability.
   - AVNZ is a Team‑managed project; manage statuses via Board settings → Columns, not the classic global workflow editor. See `JIRA.md` for current steps.
   - See `JIRA.md` for setup and `BRAVE_MODE.md` for automation/quiet-mode conventions. Env vars: `JIRA_EMAIL`, `JIRA_DOMAIN`, `JIRA_API_TOKEN`.
+  - PR gating env: set `AUTO_PR_WHEN_DONE=1` to allow bots to open PRs automatically when a ticket is marked code-complete; set `AUTO_PR_WHEN_DONE=0` to require manual PR creation.
   - Portal webhook: configure Jira Automation to POST to `/jira/events/:orgCode` with header `X-Jira-Secret`. Store secret under `/admin/secrets` → service `jira`, name `webhook_secret` (env `JIRA_WEBHOOK_SECRET` allowed for local dev).
 - Security & compliance
   - Client/Wizard forms: always use `method="post"`; avoid querystring submissions.
