@@ -72,9 +72,6 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
           <JiraJobsTable rows={rowsJobs} />
         </CardContent>
       </Card>
-    </main>
-  )
-}
       <Card>
         <CardHeader className="px-4 py-3"><CardTitle className="text-base">Jira Automation Health</CardTitle></CardHeader>
         <CardContent className="p-4 pt-0 text-sm grid md:grid-cols-2 gap-3">
@@ -90,3 +87,6 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
           </div>
         </CardContent>
       </Card>
+    </main>
+  )
+}
