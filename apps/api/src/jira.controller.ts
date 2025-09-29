@@ -280,6 +280,89 @@ export class JiraController {
     } finally { c.release() }
   }
 
+  // List stale Jira issues (statusCategory != Done and not updated within N minutes)
+  @Get('stale')
+  async stale(@Req() req:any, @Query('minutes') minutes?: string){
+    const orgUUID = req?.auth?.orgUUID
+    if (!orgUUID) throw new BadRequestException('unauthorized')
+    const roles: string[] = Array.isArray(req?.auth?.roles) ? req.auth.roles : []
+    if (!(roles||[]).includes('org') && !(roles||[]).includes('admin')) {
+      const perms: string[] = Array.isArray(req?.auth?.perms) ? req.auth.perms : []
+      if (!perms.includes('view_usage')) throw new ForbiddenException('insufficient permissions')
+    }
+    const domain = process.env.JIRA_DOMAIN || ''
+    const email = process.env.JIRA_EMAIL || ''
+    const apiToken = process.env.JIRA_API_TOKEN || ''
+    const project = process.env.JIRA_PROJECT_KEY || 'AVNZ'
+    const mins = Math.max(5, Number(minutes || '30'))
+    if (!domain || !email || !apiToken) return { issues: [] }
+    const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
+    const jql = encodeURIComponent(`project = ${project} AND statusCategory != Done AND updated <= -${mins}m ORDER BY updated DESC`)
+    const url = `https://${domain}/rest/api/3/search?jql=${jql}&maxResults=50&fields=summary,status,updated`
+    const r = await fetch(url, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+    if (!r.ok) return { issues: [] }
+    const data: any = await r.json().catch(()=>({ issues: [] }))
+    const issues = (data.issues||[]).map((it:any)=> ({
+      key: it.key,
+      summary: it.fields?.summary,
+      status: it.fields?.status?.name,
+      updated: it.fields?.updated,
+    }))
+    return { issues, minutes: mins }
+  }
+
+  // Requeue stale issues by mapping status → phase (dev/review/qa)
+  @Post('requeue-stale')
+  async requeueStale(@Req() req:any, @Query('minutes') minutes?: string){
+    const orgUUID = req?.auth?.orgUUID
+    if (!orgUUID) throw new BadRequestException('unauthorized')
+    const roles: string[] = Array.isArray(req?.auth?.roles) ? req.auth.roles : []
+    if (!(roles||[]).includes('org') && !(roles||[]).includes('admin')) {
+      const perms: string[] = Array.isArray(req?.auth?.perms) ? req.auth.perms : []
+      if (!perms.includes('admin') && !perms.includes('manage_projects')) {
+        throw new ForbiddenException('insufficient permissions')
+      }
+    }
+    const domain = process.env.JIRA_DOMAIN || ''
+    const email = process.env.JIRA_EMAIL || ''
+    const apiToken = process.env.JIRA_API_TOKEN || ''
+    const project = process.env.JIRA_PROJECT_KEY || 'AVNZ'
+    const mins = Math.max(5, Number(minutes || '30'))
+    if (!domain || !email || !apiToken) return { ok: false, reason: 'missing_jira_env' }
+    const basic = Buffer.from(`${email}:${apiToken}`).toString('base64')
+    const jql = encodeURIComponent(`project = ${project} AND statusCategory != Done AND updated <= -${mins}m ORDER BY updated DESC`)
+    const url = `https://${domain}/rest/api/3/search?jql=${jql}&maxResults=100&fields=summary,status,updated`
+    const r = await fetch(url, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+    if (!r.ok) return { ok: false, reason: 'jira_search_failed', status: r.status }
+    const data: any = await r.json().catch(()=>({ issues: [] }))
+    const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
+    const c = await pool.connect()
+    try {
+      let queued = 0
+      for (const it of (data.issues||[])){
+        const key = it.key
+        const statusName = String(it.fields?.status?.name||'').toLowerCase()
+        let phase = ''
+        if (statusName === 'in progress' || statusName === 'blocked') phase = 'dev'
+        else if (statusName === 'in review') phase = 'review'
+        else if (statusName === 'qa testing' || statusName === 'qa') phase = 'qa'
+        if (!phase) continue
+        const exists = await c.query('select 1 from jira_jobs where org_id=$1 and issue_key=$2 and deleted_at is null limit 1', [orgUUID, key])
+        if (exists.rows.length > 0) continue
+        const summary = String(it.fields?.summary||'')
+        const taskText = `[${phase.toUpperCase()} Jira ${key}] Re-run phase ${phase} for stale issue ${key}.\n\n${summary}`
+        const body = JSON.stringify({ task: taskText, meta: { org_id: orgUUID, jira_issue_key: key, phase } })
+        try {
+          const rr = await fetch(`${aiBase}/agents/jobs`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
+          const jj: any = await rr.json().catch(()=>({}))
+          const jobId = jj.job_id || jj.id || null
+          if (jobId) { await c.query('insert into jira_jobs(org_id, issue_key, job_id, status) values ($1,$2,$3,$4)', [orgUUID, key, jobId, 'queued']); queued++ }
+        } catch {}
+      }
+      return { ok: true, queued }
+    } finally { c.release() }
+  }
+
   // AI worker callback when a portal job completes (service-to-service token)
   @Post('agents-complete')
   async onAgentsComplete(@Req() req: any){

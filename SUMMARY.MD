@@ -932,3 +932,11 @@ Update 2025-09-28 (Bots Workflow)
 - Added `scripts/agents/start-ticket.sh` to bootstrap bot work on a ticket by pulling Jira summary/description (if configured) and invoking the AI orchestrator with a task prompt aligned to repo conventions.
 - Added `scripts/git/auto-pr-when-done.sh` for gated PR creation that ensures a `AVNZ-###: Code complete` commit exists at PR time.
 - Default bot behavior: `AUTO_PR_WHEN_DONE=1` (configurable).
+
+Update 2025-09-28 (Jira Monitor & Stale Requeue)
+- API (JiraController):
+  - `GET /jira/stale?minutes=30` — lists Jira issues with `statusCategory != Done` not updated within N minutes (requires Jira env vars).
+  - `POST /jira/requeue-stale?minutes=30` — requeues portal jobs for stale issues by mapping status→phase (In Progress→dev, In Review→review, QA Testing→qa). Dedupes via `jira_jobs`.
+  - Existing endpoints used by UI: `GET /jira/events`, `GET /jira/assignees/load`.
+- Web UI: new admin page `/admin/jira-monitor` (Dashboard → Jira Monitor) showing Assignee Load, Stale Issues (with Requeue All), and Recent Jira Events. Uses shadcn cards and DataTable, matching Clients page scaffolding.
+- Env: `.env.example` now includes Jira automation/monitoring vars (`JIRA_EMAIL`, `JIRA_DOMAIN`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`, `JIRA_DEFAULT_ORG_CODE`, `JIRA_BACKFILL_*`, etc.).
