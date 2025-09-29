@@ -1,4 +1,3 @@
-"use client"
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -63,7 +62,8 @@ export default function JiraAssignees(){
   }
 
   function parsePeople(v: string){
-    const parts = String(v||'').split(/[;,\n]+/).map(s=>s.trim()).filter(Boolean)
+    const parts = String(v||'').split(/[;,
+]+/).map(s=>s.trim()).filter(Boolean)
     return parts.map(p => {
       if (p.includes('|')) { const [name,title] = p.split('|'); return { name: name.trim(), title: (title||'').trim() } }
       const m = p.match(/^(.*)\((.*)\)$/)
@@ -88,8 +88,12 @@ export default function JiraAssignees(){
                 <div>
                   <div className="text-sm font-medium">Load balance by availability</div>
                   <div className="text-xs text-muted-foreground">
-                    {/* Additional settings can be added here */}
+                    <Input type="checkbox" checked={loadBalance} onChange={e => setLoadBalance(e.target.checked)} />
                   </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium">Lock Assignment Label</div>
+                  <Input value={lockLabel} onChange={e => setLockLabel(e.target.value)} />
                 </div>
               </div>
             </div>

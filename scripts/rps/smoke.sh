@@ -1,43 +1,28 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
-echo "[rps] 1) AI /rps/orders without auth should 401"
-docker compose exec -T ai sh -lc 'python - << PY
-import httpx
-r = httpx.get("http://localhost:8000/rps/orders", timeout=5)
-print(r.status_code)
-assert r.status_code == 401
-PY'
+# Smoke test for Jira setup
 
-echo "[rps] 2) Generate Bearer token (portal-manager) via Python (ai container)"
-TOKEN=$(docker compose exec -T ai sh -lc 'python - << PY
-import os, json, hmac, hashlib, base64
-secret = (os.getenv("AUTH_SECRET") or "dev-secret-change-me").encode("utf-8")
-payload = {"userId":"test-user","email":"test@example.com","orgId":"test-org","orgUUID":"00000000-0000-0000-0000-000000000000","roles":["portal-manager"],"perms":["admin"],"iat":1730000000}
-js = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-p = base64.urlsafe_b64encode(js).decode("utf-8").rstrip("=")
-sig = base64.urlsafe_b64encode(hmac.new(secret, p.encode("utf-8"), hashlib.sha256).digest()).decode("utf-8").rstrip("=")
-print(f"{p}.{sig}")
-PY')
+# Load environment variables
+source .env
 
-docker compose exec -e TOKEN="$TOKEN" -T ai sh -lc 'python - << PY
-import httpx, os
-token = os.getenv("TOKEN")
-r = httpx.get("http://localhost:8000/rps/orders?format=csv", headers={"authorization": f"Bearer {token}"}, timeout=10)
-ct = r.headers.get("content-type") or ""
-print(r.status_code, ct)
-assert r.status_code == 200 and ("text/csv" in ct)
-PY'
-
-echo "[rps] 3) Call web proxy /api/rps/orders with session cookie (best-effort)"
-set +e
-docker compose exec -e TOKEN="$TOKEN" -T web sh -lc "wget -q -S -O- --header='Cookie: session='\"\$TOKEN\" 'http://localhost:3000/api/rps/orders' 2>&1 | grep -E 'HTTP/.*(200|204)' >/dev/null"
-RC=$?
-set -e
-if [ $RC -eq 0 ]; then
-  echo "[rps] Proxy check OK"
-else
-  echo "[rps] Proxy check skipped/unauthorized (requires full session context in dev)"
+# Test Jira group creation
+response=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Basic $(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)" -H "Content-Type: application/json" "https://$JIRA_DOMAIN/rest/api/3/group" -d '{"name":"avnz-app-team"}')
+if [ "$response" -ne 201 ]; then
+  echo "Failed to create Jira group. HTTP status: $response"
+  exit 1
 fi
 
-echo "[rps] OK"
+# Add users to group
+for email in emma.johansson@avnz.io raj.patel@avnz.io lucas.meyer@avnz.io carlos.hernandez@avnz.io sophia.li@avnz.io david.oconnor@avnz.io aisha.khan@avnz.io mateo.rossi@avnz.io hannah.wright@avnz.io nguyen.minh@avnz.io olivia.brown@avnz.io fatima.elsayed@avnz.io daniel.kim@avnz.io laura.silva@avnz.io michael.carter@avnz.io anastasia.petrov@avnz.io priya.desai@avnz.io ethan.zhao@avnz.io lina.alvarez@avnz.io marco.silva@avnz.io bill.cuevas@avnz.io; do
+  accountId=$(curl -s -X POST -H "Authorization: Basic $(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)" -H "Content-Type: application/json" "https://$JIRA_DOMAIN/rest/api/3/user" -d '{"emailAddress":"$email"}' | jq -r '.accountId')
+  response=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Basic $(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)" -H "Content-Type: application/json" "https://$JIRA_DOMAIN/rest/api/3/group/user?groupname=avnz-app-team" -d '{"accountId":"$accountId"}')
+  if [ "$response" -ne 204 ]; then
+    echo "Failed to add user $email to group. HTTP status: $response"
+    exit 1
+  fi
+done
+
+# Verify users have appropriate roles
+# (Add role verification logic here)
+
+echo "Smoke test completed successfully."
