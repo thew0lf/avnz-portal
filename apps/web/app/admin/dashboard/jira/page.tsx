@@ -5,6 +5,7 @@ import { apiBase } from '@/lib/api'
 import JiraAssignees from './JiraAssignees'
 import JiraEventsTable from './JiraEventsTable'
 import BackfillButton from './BackfillButton'
+import RequeueStaleButton from './RequeueStaleButton'
 import JiraAssigneeLoadTable from './JiraAssigneeLoadTable'
 
 async function fetchEvents(limit=25){
@@ -44,6 +45,11 @@ export default async function JiraIntegrationPage(){
           <div className="text-sm font-medium mb-1">Queue In‑Progress</div>
           <div className="text-xs text-muted-foreground mb-2">Queues any issues currently In Progress</div>
           <BackfillButton />
+        </div>
+        <div className="border rounded bg-white p-4">
+          <div className="text-sm font-medium mb-1">Requeue Stale</div>
+          <div className="text-xs text-muted-foreground mb-2">Requeues issues not updated within N minutes</div>
+          <RequeueStaleButton />
         </div>
       </div>
       <div className="border rounded bg-white p-4">

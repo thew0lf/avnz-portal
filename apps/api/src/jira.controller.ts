@@ -281,6 +281,36 @@ export class JiraController {
     } finally { c.release() }
   }
 
+  // List recent agent jobs with Jira linkage
+  @Get('jobs')
+  async jobs(@Req() req:any, @Query('limit') limit?: string){
+    const orgUUID = req?.auth?.orgUUID
+    if (!orgUUID) throw new BadRequestException('unauthorized')
+    const roles: string[] = Array.isArray(req?.auth?.roles) ? req.auth.roles : []
+    if (!(roles||[]).includes('org') && !(roles||[]).includes('admin')) {
+      const perms: string[] = Array.isArray(req?.auth?.perms) ? req.auth.perms : []
+      if (!perms.includes('view_usage')) throw new ForbiddenException('insufficient permissions')
+    }
+    const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
+    const lim = Math.max(1, Math.min(200, Number(limit||'50')))
+    try {
+      const r = await fetch(`${aiBase}/agents/jobs?limit=${lim}`, { headers: { 'accept':'application/json' } })
+      if (!r.ok) return { rows: [] }
+      const data: any = await r.json().catch(()=>({ rows: [] }))
+      const rows = (data.rows||[]).filter((j:any)=> j?.meta?.jira_issue_key).map((j:any)=> ({
+        id: j.id,
+        status: j.status,
+        created_at: j.created_at ? new Date(Number(j.created_at||0)*1000).toISOString() : null,
+        finished_at: j.finished_at ? new Date(Number(j.finished_at||0)*1000).toISOString() : null,
+        phase: j.meta?.phase || null,
+        assigned_to: j.meta?.assigned_to || null,
+        issue_key: j.meta?.jira_issue_key || null,
+        task: j.task || '',
+      }))
+      return { rows }
+    } catch { return { rows: [] } }
+  }
+
   // List stale Jira issues (statusCategory != Done and not updated within N minutes)
   @Get('stale')
   async stale(@Req() req:any, @Query('minutes') minutes?: string){

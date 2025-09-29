@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import JiraAssigneeLoadTable from '@/app/admin/dashboard/jira/JiraAssigneeLoadTable'
 import JiraEventsTable from '@/app/admin/dashboard/jira/JiraEventsTable'
 import JiraStaleTable from '@/app/admin/dashboard/jira/JiraStaleTable'
+import JiraJobsTable from '@/app/admin/dashboard/jira/JiraJobsTable'
 import { ActionButton } from '@/components/admin/ActionButton'
 
 export default async function JiraMonitorPage({ searchParams }: { searchParams?: { minutes?: string } }){
@@ -18,10 +19,11 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
 
   const minutes = Number(searchParams?.minutes || '30')
 
-  const [loadRes, eventsRes, staleRes] = await Promise.all([
+  const [loadRes, eventsRes, staleRes, jobsRes] = await Promise.all([
     apiFetch('/jira/assignees/load'),
     apiFetch('/jira/events?limit=50'),
     apiFetch(`/jira/stale?minutes=${minutes}`),
+    apiFetch('/jira/jobs?limit=50'),
   ])
   const load = await loadRes.json().catch(()=>({ rows: [] }))
   const events = await eventsRes.json().catch(()=>({ rows: [] }))
@@ -30,6 +32,7 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
   const rowsLoad = load.rows || []
   const rowsEvents = events.rows || []
   const rowsStale = stale.issues || []
+  const rowsJobs = jobsRes.ok ? (await jobsRes.json().catch(()=>({ rows: [] }))).rows || [] : []
 
   return (
     <main className="p-6 space-y-6">
@@ -60,7 +63,12 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
           <JiraEventsTable rows={rowsEvents} />
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Recent Portal Jobs</CardTitle></CardHeader>
+        <CardContent className="p-4 pt-0">
+          <JiraJobsTable rows={rowsJobs} />
+        </CardContent>
+      </Card>
     </main>
   )
 }
-
