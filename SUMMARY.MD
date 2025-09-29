@@ -933,6 +933,9 @@ Update 2025-09-28 (Bots Workflow)
 - Added `scripts/git/auto-pr-when-done.sh` for gated PR creation that ensures a `AVNZ-###: Code complete` commit exists at PR time.
 - Default bot behavior: `AUTO_PR_WHEN_DONE=1` (configurable).
 - Orchestrator now extracts `files` from Implementer output and retries with a "JSON‑only files" instruction if absent, enabling the worker to auto‑apply code changes reliably.
+- Worker enhancements: phase‑specific checks
+  - Review: runs `scripts/lint.sh` (when present) to assist Sr Dev review; results reported back to Jira in the job comment.
+  - QA: performs HTTP sanity checks (API `/health`, Web `/login`) to validate responsiveness; results included in Jira comments.
 
 Update 2025-09-28 (Jira Monitor & Stale Requeue)
 - API (JiraController):

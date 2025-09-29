@@ -14,4 +14,3 @@ export class SimpleCache<T> {
 }
 
 export const permCache = new SimpleCache<any>(5000)
-
