@@ -36,4 +36,3 @@ export class SpecAuthController {
     } finally { client.release() }
   }
 }
-
