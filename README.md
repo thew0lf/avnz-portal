@@ -83,6 +83,17 @@ Git hooks (optional but recommended)
 - Commit style: start messages with `AVNZ-###: ...`.
 - Guardrails: enable hooks via `git config core.hooksPath .githooks` to block vendor/build artifacts and >50MB files.
 - Open PR (bots): only after code-complete and checks pass. Use `scripts/git/auto-pr-when-done.sh AVNZ-###` which will add an empty `AVNZ-###: Code complete` commit if needed and open the PR.
+
+## Jira In‑Progress Monitoring
+- Configure env (see `.env.example` JIRA section): `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_DOMAIN`, `JIRA_PROJECT_KEY`, `JIRA_DEFAULT_ORG_CODE`, `JIRA_BACKFILL_ON_START=1`, `JIRA_BACKFILL_INTERVAL_SEC=300`.
+- Webhook (Jira → Portal): Project Automation → Send web request to `/jira/events/:orgCode` with header `X-Jira-Secret`. Store secret under Admin → Secrets (`service=jira`, `name=webhook_secret`).
+- Direct queue (safety): Automation second action POST `/api/agents/jobs` with `{ task, meta.jira_issue_key }`.
+- Backfill & poll: API starts backfill on boot and every `JIRA_BACKFILL_INTERVAL_SEC` seconds.
+- Stale requeue: `bash scripts/jira-requeue-stale.sh 30` to requeue work for issues updated >30m ago (maps status→phase).
+- Verify access/config:
+  - `bash scripts/jira-verify-access.sh` (lists group members, roles, boards)
+  - `bash scripts/jira-backfill-and-status.sh` (triggers backfill, prints AI jobs)
+  - API: `GET /jira/events` (org-scoped), `GET /jira/assignees/load`
 ## Full Reset & Health Check (Local)
 If your database or migrations get out of sync, perform a clean reset and verify health.
 
