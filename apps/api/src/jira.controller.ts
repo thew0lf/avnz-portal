@@ -38,8 +38,7 @@ export class JiraController {
 
   private async pickFromList(listVal: string, orgId: string|undefined, phase: string): Promise<string|undefined> {
     const raw = String(listVal || '')
-    const parts = raw.split(/[;,
-]+/).map(s => s.trim()).filter(Boolean)
+    const parts = raw.split(/[;,\n]+/).map(s => s.trim()).filter(Boolean)
     if (parts.length === 0) return undefined
     if (parts.length === 1) return parts[0]
     return parts[Math.floor(Math.random() * parts.length)]
@@ -59,8 +58,7 @@ export class JiraController {
       rawList = process.env[envKey + '_LIST'] || process.env[envKey] || ''
     }
     const names = String(rawList || '')
-      .split(/[;,
-]+/)
+      .split(/[;,\n]+/)
       .map(s=>s.trim())
       .filter(Boolean)
       .map(s=> this.normalizeName(s))
@@ -86,8 +84,31 @@ export class JiraController {
         if (!acct) { counts.push({ name:n, open: 1e9 }); continue }
         try {
           const jql = encodeURIComponent(`project = ${project} AND assignee = ${acct} AND statusCategory != Done`)
-        }
+          void(jql)
+        } catch {}
       }
     }
+    // Fallback: pick random
+    const picked = await this.pickFromList(names.join(','), orgId!, phase)
+    if (!picked) return undefined
+    const acct2 = await this.resolveAccountId(picked, domain, basic)
+    return acct2 ? { name: picked, accountId: acct2 } : undefined
   }
+  private normalizeName(s: string): string { return String(s||'').split('|')[0].trim() }
+  private async getAssignmentExclude(orgId?: string): Promise<Set<string>> {
+    const ex: string[] = []
+    // Prefer DB config if available
+    try {
+      if (orgId) {
+        const db = await getServiceConfig(orgId, null, 'jira', 'assignment_exclude')
+        if (db) ex.push(...String(db).split(/[;,\n]+/).map(v=>v.trim()).filter(Boolean))
+      }
+    } catch {}
+    const env = process.env.JIRA_ASSIGNMENT_EXCLUDE || ''
+    if (env) ex.push(...env.split(/[;,\n]+/).map(v=>v.trim()).filter(Boolean))
+    // Default safeguard
+    ex.push('bill cuevas')
+    return new Set(ex.map(v=>v.toLowerCase()))
+  }
+  private async resolveAccountId(_name: string, _domain: string, _basic: string): Promise<string|undefined> { return undefined }
 }

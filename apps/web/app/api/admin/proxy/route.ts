@@ -33,9 +33,15 @@ export async function POST(req: NextRequest) {
     }
   }
   const api = serverApiBase()
+  const headers: Record<string,string> = { 'content-type': 'application/json', authorization: `Bearer ${token}` }
+  // For service-token endpoints, inject X-Service-Token from env
+  if (forwardPath.startsWith('/jira/') || forwardPath.startsWith('/admin/services/configs/persist-jira-assignees')) {
+    const svc = process.env.SERVICE_TOKEN || ''
+    if (svc) headers['x-service-token'] = svc
+  }
   const r = await fetch(`${api}${forwardPath}`, {
     method: m,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   })

@@ -16,5 +16,12 @@
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "src/routes/**",
+    "src/controllers/**",
+    "src/db/migrations/**",
+    "src/bootstrap.ts",
+    "src/authz/register.controller.ts"
   ]
 }

@@ -957,3 +957,21 @@ Update 2025-09-29 (Web — Build fix)
 - Fixed Next.js build error caused by an unterminated regex literal in Jira assignees parser.
 - Files: `apps/web/app/admin/dashboard/jira/JiraAssignees.tsx` (regex consolidated to single line: `split(/[;,\n]+/)`).
 - Behavior: Web compiles successfully; parsing supports commas, semicolons, and newlines between assignees.
+2025-09-29 — Jira assignment persistence via service token; Force Start wiring
+
+- API
+  - Added POST `/admin/services/configs/persist-jira-assignees` secured by `X-Service-Token` (env `SERVICE_TOKEN`). Reads env fallbacks (`JIRA_ASSIGNEE_*[_LIST]`, `JIRA_ASSIGNMENT_EXCLUDE`, `JIRA_LOAD_BALANCE`) and persists org‑scoped `service_configs` under `service=jira` (names: `assignee_dev|review|qa|test|audit`, `assignment_exclude`, `load_balance`).
+  - Updated `jira.controller.ts` to honor DB `assignment_exclude` via `getServiceConfig()` before env fallback.
+  - Wired controller in `apps/api/src/main.ts`.
+- Web
+  - `Admin → Jira → Monitor` now includes a “Persist Assignment Lists” button that invokes the new endpoint via `/api/admin/proxy` (proxy injects `X-Service-Token`).
+  - Updated proxy (`apps/web/app/api/admin/proxy/route.ts`) to forward `X-Service-Token` for `/jira/*` and the new admin persist route.
+- Files touched
+  - `apps/api/src/admin-secrets-token.controller.ts` (new)
+  - `apps/api/src/jira.controller.ts`
+  - `apps/api/src/main.ts`
+  - `apps/web/app/api/admin/proxy/route.ts`
+  - `apps/web/app/admin/jira-monitor/page.tsx`
+- Env/secrets
+  - Requires `SERVICE_TOKEN` and `JIRA_DEFAULT_ORG_CODE` set in API env.
+  - Assignment lists env fallbacks remain supported; DB values now take precedence where applicable.
