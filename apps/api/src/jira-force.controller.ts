@@ -1,6 +1,6 @@
-// Add this block at the end of the forceStart method
+// Update the forceStart method in jira-force.controller.ts
 if (format === 'csv') {
-    const csvData = parse(results); // Assuming results is an array of objects
+    const csvData = results.length > 0 ? parse(results) : ''; // Handle empty results
     return {
         headers: { 'Content-Type': 'text/csv' },
         body: csvData,
