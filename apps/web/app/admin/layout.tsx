@@ -9,6 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import JiraStaleBadge from '@/components/admin/JiraStaleBadge'
 import { PanelLeft, ChevronLeft, ChevronRight, Grid2X2, Users, ShoppingCart, Shield, Key, BarChart3, Percent } from 'lucide-react'
 
 type SectionProps = {
@@ -225,7 +226,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <MenuLink href="/admin/dashboard/jira">Jira</MenuLink>
           </Section>
           <Section title="Jira" icon={Icons.tasks}>
-            <MenuLink href="/admin/jira-monitor">Monitor</MenuLink>
+            <MenuLink href="/admin/jira-monitor"><span className="inline-flex items-center gap-2">Monitor <JiraStaleBadge /></span></MenuLink>
             <MenuLink href="/admin/dashboard/jira">Dashboard</MenuLink>
           </Section>
           <Section title="Tenants" icon={Icons.tenants}>
