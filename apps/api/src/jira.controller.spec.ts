@@ -1,13 +1,22 @@
-it('should handle error scenarios gracefully', async () => {
-    const req = { query: { format: 'csv' }, body: { keys: ['TEST-1'] } };
-    // Simulate an error
-    jest.spyOn(controller, 'forceStart').mockImplementation(() => { throw new Error('Test error'); });
-    await expect(controller.forceStart(req)).rejects.toThrow(BadRequestException);
-});
+import { Test, TestingModule } from '@nestjs/testing';
+import { JiraForceController } from './jira-force.controller';
+import { BadRequestException } from '@nestjs/common';
 
-it('should return empty CSV when results are empty', async () => {
-    const req = { query: { format: 'csv' }, body: { keys: [] } }; // Empty keys
-    const result = await controller.forceStart(req);
-    expect(result.headers['Content-Type']).toBe('text/csv');
-    expect(result.body).toBe(''); // Expect empty CSV
+describe('JiraForceController', () => {
+  let controller: JiraForceController;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [JiraForceController],
+    }).compile();
+    controller = module.get<JiraForceController>(JiraForceController);
+  });
+
+  it('should throw BadRequestException for missing keys', async () => {
+    await expect(controller.forceStart({ body: {} })).rejects.toThrow(BadRequestException);
+  });
+
+  it('should throw BadRequestException for invalid issue key format', async () => {
+    await expect(controller.forceStart({ body: { keys: ['INVALID-KEY'] } })).rejects.toThrow(BadRequestException);
+  });
 });
