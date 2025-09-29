@@ -1,4 +1,3 @@
-"use client"
 import { DataTable, CommonColumn } from '@/components/ui/data-table'
 import { ActionButton } from '@/components/admin/ActionButton'
 
