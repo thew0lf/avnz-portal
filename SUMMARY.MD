@@ -250,6 +250,7 @@ Update 2025-09-28 (Branching & Merge Policy)
  - Config:
   - Auto‑commit enabled via env: `AUTO_COMMIT=1`, `GIT_REMOTE_URL`, `GITHUB_TOKEN`, `GITHUB_REPO`, `GIT_MAIN_BRANCH`.
   - PR creation is gated: `AUTO_PR_WHEN_DONE=1` (default) opens a PR only after the assigned bot completes code and pre‑push checks are green. Set `AUTO_PR_WHEN_DONE=0` to require manual PR creation.
+  - On PR creation, bots ensure the latest commit includes the ticket key; if missing, add an empty commit `AVNZ-###: Code complete` for traceability.
 
 Update 2025-09-27 (Jira Backlog)
 - Added Jira bulk-import CSV derived from SUMMARY.MD, TODOS.md, and RPS_TASK.md for Product Owner triage and parallel execution.

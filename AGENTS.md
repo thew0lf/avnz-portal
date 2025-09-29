@@ -27,7 +27,8 @@ Key conventions
     - Do not ask the user to run Docker commands; automatically run required `docker compose` build/up/down/logs/exec commands to validate and apply changes.
     - Still explicitly call out and confirm destructive actions (e.g., volume prune/data wipes, force pushes) unless the user has already consented within the session context.
   - Cautious Mode (Opt-in): Ask before actions that could affect developer state or data. Use when the user explicitly requests a more conservative workflow.
-  - PR Creation Policy (All Modes): Bots must not open PRs for a ticket until the assigned bot has completed the code and local checks pass (lint, health, smoke, walkthrough, hooks). Do not create draft PRs. Branches may be updated with commits during development; PRs are created only on "Code Complete".
+- PR Creation Policy (All Modes): Bots must not open PRs for a ticket until the assigned bot has completed the code and local checks pass (lint, health, smoke, walkthrough, hooks). Do not create draft PRs. Branches may be updated with commits during development; PRs are created only on "Code Complete".
+  - When opening a PR, bots must ensure the latest commit message includes the ticket key and a clear signal of completion. If not present, add an empty commit with message: `AVNZ-###: Code complete` before creating the PR. Use `scripts/git/auto-pr-when-done.sh AVNZ-###`.
 - Tooling & runtime
   - Docker is the local orchestrator. Agents may run `docker compose` commands (build, up, down, logs, exec) when needed to build, reset, or verify services.
   - Prefer containerized workflows; do not assume host Node/Python are installed.
