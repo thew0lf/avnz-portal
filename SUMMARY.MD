@@ -952,3 +952,8 @@ Update 2025-09-28 (Jira Monitor & Stale Requeue)
 Update 2025-09-28 (Automation Mandate)
 - Policy: Add as much safe, auditable bot automation as possible. Target areas: Jira triggers (queue, requeue), phase orchestration (dev→review→qa→...), PR gating, doc updates, and monitoring. All automation must be env-gated and observable via Admin pages.
 - Defaults: Enabled auto-requeue every 5 minutes via `JIRA_REQUEUE_STALE_INTERVAL_SEC=300` (local dev). Threshold `JIRA_REQUEUE_STALE_MINUTES=30`.
+
+Update 2025-09-29 (Web — Build fix)
+- Fixed Next.js build error caused by an unterminated regex literal in Jira assignees parser.
+- Files: `apps/web/app/admin/dashboard/jira/JiraAssignees.tsx` (regex consolidated to single line: `split(/[;,\n]+/)`).
+- Behavior: Web compiles successfully; parsing supports commas, semicolons, and newlines between assignees.

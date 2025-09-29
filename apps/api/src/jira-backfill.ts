@@ -75,5 +75,5 @@ export async function requeueStale(minutes: number = 30){
   const project = process.env.JIRA_PROJECT_KEY || 'AVNZ'
   const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || ''
   const aiBase = process.env.AI_BASE_INTERNAL || 'http://ai:8000'
-  // Implementation for requeue stale issues goes here
+  // Implementation for requeue stale issues
 }

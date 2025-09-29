@@ -93,7 +93,7 @@ export class JiraController {
         if (!acct) { counts.push({ name:n, open: 1e9 }); continue }
         try {
           const jql = encodeURIComponent(`project = ${project} AND assignee = ${acct} AND statusCategory != Done`)
-          // Further implementation goes here
+          // Further implementation here
         } catch {}
       }
     }

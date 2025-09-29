@@ -88,3 +88,14 @@ export default function JiraAssignees(){
                 <div>
                   <div className="text-sm font-medium">Load balance by availability</div>
                   <div className="text-xs text-muted-foreground">
+                    {/* Additional settings can be added here */}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  )
+}
