@@ -75,4 +75,45 @@ export default function TemplateForms({ nodeId, clients, emailTemplates, smsTemp
   async function upsertSms(e: React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const body:any = { key: String(fd.get('key')||''), client_id: String(fd.g
+    const body:any = { key: String(fd.get('key')||''), client_id: String(fd.get('client_id')||'')||undefined, body: String(fd.get('body')||'') };
+    const r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/admin/templates/sms', method:'POST', body }) });
+    if (r.ok) success('SMS template saved'); else error('We couldn’t save the template. Please try again.');
+  }
+  return (
+    <div className="space-y-4">
+      <form method="post" onSubmit={upsertEmail} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+        <div><label className="block text-sm text-muted-foreground">Key</label><Input name="key" placeholder="template_key" required /></div>
+        <div><label className="block text-sm text-muted-foreground">Client</label><SearchableRSelect value={emailClientId} onValueChange={setEmailClientId} items={clientGroups} placeholder="Select client" /></div>
+        <div><label className="block text-sm text-muted-foreground">Subject</label><Input name="subject" placeholder="Email subject" required /></div>
+        <div><label className="block text-sm text-muted-foreground">Body</label><textarea name="body" ref={bodyRef} required></textarea></div>
+        <div className="md:col-span-4"><Button type="submit">Save Email Template</Button></div>
+      </form>
+      <form method="post" onSubmit={upsertSms} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+        <div><label className="block text-sm text-muted-foreground">Key</label><Input name="key" placeholder="template_key" required /></div>
+        <div><label className="block text-sm text-muted-foreground">Client</label><SearchableRSelect value={smsClientId} onValueChange={setSmsClientId} items={clientGroups} placeholder="Select client" /></div>
+        <div><label className="block text-sm text-muted-foreground">Body</label><textarea name="body" required></textarea></div>
+        <div className="md:col-span-4"><Button type="submit">Save SMS Template</Button></div>
+      </form>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Key</TableHead>
+            <TableHead>Client</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {emailTemplates.map((template) => (
+            <TableRow key={template.id}>
+              <TableCell>{template.key}</TableCell>
+              <TableCell>{keyToName[template.client_id] || 'Global'}</TableCell>
+              <TableCell>
+                <ActionButton variant="secondary" label="Edit" onClick={() => loadDefault(template.key)} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
