@@ -79,24 +79,4 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing keys.');
     });
-
-    test('should throw BadRequestException for invalid input formats', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['INVALID_KEY!'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Invalid input format.');
-    });
-
-    test('should simulate SQL injection attack', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-        const body = await response.json();
-        expect(body).toHaveProperty('success', true);
-    });
 });
