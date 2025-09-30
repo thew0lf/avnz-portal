@@ -41,4 +41,12 @@ describe('JiraForceController', () => {
     it('should throw ForbiddenException for invalid user role', async () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } } })).rejects.toThrow(ForbiddenException);
     });
+
+    it('should throw BadRequestException for partially set environment variables', async () => {
+        process.env.JIRA_PROJECT_KEY = '';
+        process.env.JIRA_DEFAULT_ORG_CODE = 'valid_org_code';
+        process.env.JIRA_EMAIL = 'valid_email';
+        process.env.JIRA_API_TOKEN = 'valid_token';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
 });
