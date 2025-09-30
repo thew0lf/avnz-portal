@@ -19,7 +19,8 @@ export class JiraForceController {
     const email = process.env.JIRA_EMAIL || '';
     const apiToken = process.env.JIRA_API_TOKEN || '';
     const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
-    if (!domain || !email || !apiToken || !orgCode) throw new BadRequestException('Missing required JIRA environment variables.');
+    const projectKey = process.env.JIRA_PROJECT_KEY || '';
+    if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
     // ... rest of the code remains unchanged
   }
 }
