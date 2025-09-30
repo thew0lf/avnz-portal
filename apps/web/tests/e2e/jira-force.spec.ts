@@ -28,6 +28,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const body = await response.json();
         expect(body.message).toContain('Missing required JIRA environment variables.');
+        process.env.JIRA_PROJECT_KEY = 'your_project_key_here'; // Rollback
     });
 
     test('should throw BadRequestException for missing JIRA_DEFAULT_ORG_CODE', async ({ request }) => {
@@ -38,6 +39,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const body = await response.json();
         expect(body.message).toContain('Missing required JIRA environment variables.');
+        process.env.JIRA_DEFAULT_ORG_CODE = 'your_org_code_here'; // Rollback
     });
 
     test('should execute successfully with valid request', async ({ request }) => {
