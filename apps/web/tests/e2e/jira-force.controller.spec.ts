@@ -79,4 +79,24 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing keys.');
     });
+
+    test('should handle SQL injection test', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid input.');
+    });
+
+    test('should handle external service failure', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(500);
+        const body = await response.json();
+        expect(body.message).toContain('External service call failed.');
+    });
 });
