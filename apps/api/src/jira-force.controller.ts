@@ -12,7 +12,7 @@ export class JiraForceController {
     if (!keys.length) throw new BadRequestException('Missing keys. Please provide valid keys.');
 
     const userRole = body.user?.role;
-    const validRoles = ['OrgOwner', 'OrgAdmin'];
+    const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
     if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');
 
     const domain = process.env.JIRA_DOMAIN || '';
