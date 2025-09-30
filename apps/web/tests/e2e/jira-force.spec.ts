@@ -80,7 +80,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing keys.');
     });
 
-    test('should implement SQL injection test', async ({ request }) => {
+    test('should handle SQL injection attempt', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
