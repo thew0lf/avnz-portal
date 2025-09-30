@@ -80,11 +80,13 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing keys.');
     });
 
-    test('should handle SQL injection attempt', async ({ request }) => {
+    test('should handle SQL injection', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(400); // or check for sanitized response
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid input.');
     });
 });
