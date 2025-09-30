@@ -1,3 +1,4 @@
+// apps/api/src/jira-force.controller.ts
 import { BadRequestException, Controller, Post, Req, Query, ForbiddenException } from '@nestjs/common';
 
 @Controller('jira')
@@ -18,6 +19,6 @@ export class JiraController {
 }
 
 function isAuthorized(user: any) {
-    const validRoles = ['OrgOwner', 'OrgAdmin']; // Define valid roles
+    const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager', 'OrgStaff', 'OrgEmployee']; // Updated valid roles
     return user && user.role && validRoles.includes(user.role);
 }

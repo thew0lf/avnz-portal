@@ -20,11 +20,10 @@ test.describe('Jira Force Start API Tests', () => {
     });
 
     test('should throw BadRequestException for missing environment variables', async ({ request }) => {
-        process.env.JIRA_DOMAIN = '';
-        process.env.JIRA_EMAIL = '';
-        process.env.JIRA_API_TOKEN = '';
-        process.env.JIRA_PROJECT_KEY = '';
-        process.env.JIRA_DEFAULT_ORG_CODE = '';
+        const requiredVars = ['JIRA_DOMAIN', 'JIRA_EMAIL', 'JIRA_API_TOKEN', 'JIRA_PROJECT_KEY', 'JIRA_DEFAULT_ORG_CODE'];
+        requiredVars.forEach(varName => {
+            process.env[varName] = '';
+        });
 
         const response = await request.post('/jira/forceStart', {
             data: { keys: ['AVNZ-1'] }
