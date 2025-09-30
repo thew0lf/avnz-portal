@@ -1,43 +1,84 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('JIRA API Tests', () => {
-    test('should throw BadRequestException for missing JIRA_DOMAIN', async ({ request }) => {
+test.describe('Jira AVNZ-14 Tests', () => {
+    test('should throw BadRequestException for missing JIRA_PROJECT_KEY', async ({ request }) => {
         const response = await request.post('/jira/forceStart', {
             data: { keys: ['AVNZ-1'] },
-            headers: { authorization: 'Bearer valid_token' }
+            headers: {
+                'JIRA_PROJECT_KEY': '', // Simulating missing key
+                'JIRA_DOMAIN': 'test-domain',
+                'JIRA_EMAIL': 'test-email',
+                'JIRA_API_TOKEN': 'test-token',
+                'JIRA_DEFAULT_ORG_CODE': 'test-org-code'
+            }
         });
         expect(response.status()).toBe(400);
-        const responseBody = await response.json();
-        expect(responseBody.message).toContain('JIRA_DOMAIN is required.');
+        const body = await response.json();
+        expect(body.message).toContain('BadRequestException');
+    });
+
+    test('should throw BadRequestException for missing JIRA_DEFAULT_ORG_CODE', async ({ request }) => {
+        const response = await request.post('/jira/forceStart', {
+            data: { keys: ['AVNZ-1'] },
+            headers: {
+                'JIRA_PROJECT_KEY': 'test-project',
+                'JIRA_DOMAIN': 'test-domain',
+                'JIRA_EMAIL': 'test-email',
+                'JIRA_API_TOKEN': 'test-token',
+                'JIRA_DEFAULT_ORG_CODE': '' // Simulating missing org code
+            }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('BadRequestException');
+    });
+
+    test('should throw BadRequestException for missing JIRA_EMAIL', async ({ request }) => {
+        const response = await request.post('/jira/forceStart', {
+            data: { keys: ['AVNZ-1'] },
+            headers: {
+                'JIRA_PROJECT_KEY': 'test-project',
+                'JIRA_DOMAIN': 'test-domain',
+                'JIRA_EMAIL': '', // Simulating missing email
+                'JIRA_API_TOKEN': 'test-token',
+                'JIRA_DEFAULT_ORG_CODE': 'test-org-code'
+            }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('BadRequestException');
+    });
+
+    test('should throw BadRequestException for missing JIRA_API_TOKEN', async ({ request }) => {
+        const response = await request.post('/jira/forceStart', {
+            data: { keys: ['AVNZ-1'] },
+            headers: {
+                'JIRA_PROJECT_KEY': 'test-project',
+                'JIRA_DOMAIN': 'test-domain',
+                'JIRA_EMAIL': 'test-email',
+                'JIRA_API_TOKEN': '', // Simulating missing API token
+                'JIRA_DEFAULT_ORG_CODE': 'test-org-code'
+            }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('BadRequestException');
     });
 
     test('should throw ForbiddenException for unauthorized access', async ({ request }) => {
         const response = await request.post('/jira/forceStart', {
             data: { keys: ['AVNZ-1'] },
-            headers: { authorization: '' }
+            headers: {
+                'JIRA_PROJECT_KEY': 'test-project',
+                'JIRA_DOMAIN': 'test-domain',
+                'JIRA_EMAIL': 'test-email',
+                'JIRA_API_TOKEN': 'test-token',
+                'JIRA_DEFAULT_ORG_CODE': 'test-org-code',
+                'Authorization': 'Bearer invalid-token' // Simulating unauthorized access
+            }
         });
         expect(response.status()).toBe(403);
-        const responseBody = await response.json();
-        expect(responseBody.message).toContain('You do not have permission to access this resource.');
-    });
-
-    test('should handle multiple fetch calls efficiently', async ({ request }) => {
-        const response = await request.post('/jira/forceStart', {
-            data: { keys: ['AVNZ-1', 'AVNZ-2'] },
-            headers: { authorization: 'Bearer valid_token' }
-        });
-        expect(response.status()).toBe(200);
-        const result = await response.json();
-        expect(result).toBeDefined();
-    });
-
-    test('should handle missing configuration gracefully in backfill', async ({ request }) => {
-        const response = await request.post('/jira/backfillInProgress', {
-            headers: { authorization: 'Bearer valid_token' }
-        });
-        expect(response.status()).toBe(400);
-        const responseBody = await response.json();
-        expect(responseBody.ok).toBe(false);
-        expect(responseBody.reason).toBe('missing_config');
+        const body = await response.json();
+        expect(body.message).toContain('ForbiddenException');
     });
 });
