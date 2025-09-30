@@ -79,4 +79,27 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing keys. Please provide valid keys.');
     });
+
+    test('should throw BadRequestException for invalid input types', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: 'invalid_type', user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid input types.');
+    });
+
+    test('should handle concurrent requests', async ({ request }) => {
+        const requests = Array.from({ length: 10 }, () => request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        }));
+        const responses = await Promise.all(requests);
+        responses.forEach(response => {
+            expect(response.status()).toBe(200);
+            const body = await response.json();
+            expect(body).toHaveProperty('success', true);
+        });
+    });
 });
