@@ -30,6 +30,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const body = await response.json();
         expect(body.message).toContain('Missing required JIRA environment variables.');
+        process.env.JIRA_PROJECT_KEY = 'your_project_key_here'; // Rollback
     });
 
     test('should throw ForbiddenException for invalid user role', async ({ request }) => {
