@@ -69,4 +69,14 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body).toHaveProperty('success', true);
     });
+
+    test('should handle boundary tests for 0 keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Missing keys. Please provide valid keys.');
+    });
 });
