@@ -1,4 +1,3 @@
-// apps/api/src/jira-assign.controller.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { JiraAssignController } from './jira-assign.controller';
 import { BadRequestException } from '@nestjs/common';
