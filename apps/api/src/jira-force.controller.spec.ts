@@ -60,4 +60,13 @@ describe('JiraForceController', () => {
         const response = await controller.forceStart({ body: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
     });
+
+    it('should throw BadRequestException for missing environment variables', async () => {
+        process.env.JIRA_DOMAIN = '';
+        process.env.JIRA_PROJECT_KEY = '';
+        process.env.JIRA_DEFAULT_ORG_CODE = '';
+        process.env.JIRA_EMAIL = '';
+        process.env.JIRA_API_TOKEN = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
 });
