@@ -59,15 +59,27 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body).toHaveProperty('success', true);
     });
 
+    test('should throw BadRequestException for successful execution with invalid data', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
+            headers: { 'x-service-token': 'valid_token' }
+        });
+        expect(response.status()).toBe(403);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid user role.');
+    });
+
     test('should handle boundary tests for keys', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': 'valid_token' }
         });
-        expect(response).toBeDefined();
+        expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
     });
 
-    test('should handle boundary tests for 0 keys', async ({ request }) => {
+    test('should handle empty keys array', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: [], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': 'valid_token' }
@@ -75,13 +87,5 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const body = await response.json();
         expect(body.message).toContain('Missing keys. Please provide valid keys.');
-    });
-
-    test('should handle boundary tests for 1 key', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': 'valid_token' }
-        });
-        expect(response).toBeDefined();
     });
 });
