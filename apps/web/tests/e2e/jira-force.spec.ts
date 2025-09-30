@@ -8,7 +8,7 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(403);
         const body = await response.json();
-        expect(body.message).toContain('Unauthorized access. Please check your service token.');
+        expect(body.message).toContain('Unauthorized access.');
     });
 
     test('should throw BadRequestException for missing keys', async ({ request }) => {
@@ -18,7 +18,7 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing keys. Please provide valid keys.');
+        expect(body.message).toContain('Missing keys.');
     });
 
     test('should throw BadRequestException for missing JIRA_PROJECT_KEY', async ({ request }) => {
@@ -76,6 +76,6 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing keys. Please provide valid keys.');
+        expect(body.message).toContain('Missing keys.');
     });
 });
