@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Jira Force Start API Tests', () => {
     
-test('should throw ForbiddenException for invalid user role', async ({ request }) => {
+    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } }
         });
@@ -43,5 +43,12 @@ test('should throw ForbiddenException for invalid user role', async ({ request }
         expect(response.status()).toBe(200);
         const body = await response.json();
         expect(body).toHaveProperty('ok', true);
+    });
+
+    test('should allow access for valid user roles', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } }
+        });
+        expect(response.status()).toBe(200);
     });
 });
