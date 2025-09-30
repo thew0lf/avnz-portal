@@ -75,43 +75,4 @@ export default function TemplateForms({ nodeId, clients, emailTemplates, smsTemp
   async function upsertSms(e: React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const body:any = { key: String(fd.get('key')||''), client_id: String(fd.get('client_id')||'')||undefined, body: String(fd.get('body')||'') };
-    const r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/admin/templates/sms', method:'POST', body }) });
-    if (r.ok) success('SMS template saved'); else error('We couldn’t save the template. Please try again.');
-  }
-  return (
-    <div className="space-y-4">
-      <form onSubmit={upsertEmail} className="grid gap-4">
-        <Input name="key" placeholder="Template Key" required />
-        <Input name="subject" placeholder="Subject" required />
-        <textarea name="body" ref={bodyRef} placeholder="Email Body" required />
-        <Button type="submit">Save Email Template</Button>
-      </form>
-      <form onSubmit={upsertSms} className="grid gap-4">
-        <Input name="key" placeholder="Template Key" required />
-        <Input name="client_id" placeholder="Client ID" required />
-        <Input name="body" placeholder="SMS Body" required />
-        <Button type="submit">Save SMS Template</Button>
-      </form>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Template Key</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {emailTemplates.map(template => (
-            <TableRow key={template.id}>
-              <TableCell>{template.key}</TableCell>
-              <TableCell>
-                <ActionButton variant="secondary" label="Edit" method="GET" path={`/admin/templates/email/${template.id}`} />
-                <ActionButton variant="secondary" label="Delete" method="DELETE" path={`/admin/templates/email/${template.id}`} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
+    const body:any = { key: String(fd.get('key')||''), client_id: String(fd.g
