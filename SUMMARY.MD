@@ -966,6 +966,12 @@ Update 2025-09-29 (Web — Build fix)
 - Web
   - `Admin → Jira → Monitor` now includes a “Persist Assignment Lists” button that invokes the new endpoint via `/api/admin/proxy` (proxy injects `X-Service-Token`).
   - Updated proxy (`apps/web/app/api/admin/proxy/route.ts`) to forward `X-Service-Token` for `/jira/*` and the new admin persist route.
+  - Added “Reassign Devs” button that triggers `POST /jira/assign-dev?target=org-managers` to move issues assigned to org managers (with first/last names set) into the Dev rotation (excludes Bill + configured excludes).
+- Jira automation
+  - Force Start now assigns to Devs automatically (DB `assignee_dev` or env list; respects `assignment_exclude`) after transitioning to In Progress.
+  - Requeue flow uses updated backfill util (`requeueStale`) and can be extended similarly if needed.
+- QA checklist
+  - Added `scripts/qa-routes-get.sh` to probe all GET routes (via `/admin/routes`) including authenticated ones. Requires `QA_TOKEN` (JWT) and `ORG_UUID` for admin routes. Treats 200/204/401/403 as OK; flags others. QA should file Jira bugs for any failures.
 - Files touched
   - `apps/api/src/admin-secrets-token.controller.ts` (new)
   - `apps/api/src/jira.controller.ts`
