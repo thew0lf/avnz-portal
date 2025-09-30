@@ -1,13 +1,10 @@
 {
-  "projects": [
-    {
-      "name": "API Tests",
-      "testDir": "apps/web/tests/e2e",
-      "testMatch": "*.spec.ts",
-      "use": {
-        "baseURL": "http://localhost:3000",
-        "headless": true
-      }
+  "test": {
+    "testMatch": "**/*.spec.ts",
+    "reporter": "html",
+    "use": {
+      "baseURL": "http://localhost:3000",
+      "trace": "on-first-retry"
     }
-  ]
+  }
 }
