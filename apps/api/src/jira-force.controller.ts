@@ -20,15 +20,7 @@ export class JiraForceController {
     const apiToken = process.env.JIRA_API_TOKEN || '';
     const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
     const projectKey = process.env.JIRA_PROJECT_KEY || '';
-    if (!domain || !email || !apiToken || !orgCode || !projectKey) {
-      const missingVars = [];
-      if (!domain) missingVars.push('JIRA_DOMAIN');
-      if (!email) missingVars.push('JIRA_EMAIL');
-      if (!apiToken) missingVars.push('JIRA_API_TOKEN');
-      if (!orgCode) missingVars.push('JIRA_DEFAULT_ORG_CODE');
-      if (!projectKey) missingVars.push('JIRA_PROJECT_KEY');
-      throw new BadRequestException(`Missing required JIRA environment variables: ${missingVars.join(', ')}.`);
-    }
+    if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
     // Simulate external service call and handle failure
     // ... rest of the code remains unchanged
   }
