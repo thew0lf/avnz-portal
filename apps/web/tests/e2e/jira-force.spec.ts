@@ -22,6 +22,7 @@ test.describe('Jira Force Start API Tests', () => {
     });
 
     test('should throw BadRequestException for missing JIRA_PROJECT_KEY', async ({ request }) => {
+        const originalProjectKey = process.env.JIRA_PROJECT_KEY;
         process.env.JIRA_PROJECT_KEY = '';
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
@@ -30,7 +31,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const body = await response.json();
         expect(body.message).toContain('Missing required JIRA environment variables.');
-        process.env.JIRA_PROJECT_KEY = 'your_project_key_here'; // Rollback
+        process.env.JIRA_PROJECT_KEY = originalProjectKey; // Rollback
     });
 
     test('should throw ForbiddenException for invalid user role', async ({ request }) => {
