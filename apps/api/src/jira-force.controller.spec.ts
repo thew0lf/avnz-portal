@@ -45,4 +45,8 @@ describe('JiraForceController', () => {
         const response = await controller.forceStart({ body: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
     });
+
+    it('should handle external service call failure', async () => {
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
 });
