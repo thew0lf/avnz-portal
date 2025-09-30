@@ -21,6 +21,13 @@ export class JiraForceController {
     const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
     const projectKey = process.env.JIRA_PROJECT_KEY || '';
     if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
-    // ... rest of the code remains unchanged
+
+    // Implement generic error handling
+    try {
+      // ... rest of the code remains unchanged
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      throw new BadRequestException('An unexpected error occurred.');
+    }
   }
 }
