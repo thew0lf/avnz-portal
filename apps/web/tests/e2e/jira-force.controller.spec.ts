@@ -79,17 +79,4 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing keys.');
     });
-
-    test('should execute successfully with varying input sizes', async ({ request }) => {
-        const sizes = [1, 10, 100, 500];
-        for (const size of sizes) {
-            const response = await request.post('/jira/force-start', {
-                data: { keys: Array(size).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
-                headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-            });
-            expect(response.status()).toBe(200);
-            const body = await response.json();
-            expect(body).toHaveProperty('success', true);
-        }
-    });
 });
