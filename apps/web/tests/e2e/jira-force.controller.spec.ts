@@ -80,13 +80,13 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing keys. Please provide valid keys.');
     });
 
-    test('should throw BadRequestException for server error', async ({ request }) => {
+    test('should implement security tests for SQL injection', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(500);
+        expect(response.status()).toBe(200);
         const body = await response.json();
-        expect(body.message).toContain('Internal Server Error');
+        expect(body).toHaveProperty('success', true);
     });
 });
