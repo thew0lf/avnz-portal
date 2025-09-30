@@ -17,11 +17,9 @@ export class JiraAssignController {
     if (!keys.length) throw new BadRequestException('missing keys');
 
     const rawList = String(process.env.JIRA_ASSIGNEE_DEV_LIST || process.env.JIRA_ASSIGNEE_DEV || '');
-    const exclude = new Set(String(process.env.JIRA_ASSIGNMENT_EXCLUDE || 'Bill Cuevas').split(/[;,
-]+/).map(s=>s.trim().toLowerCase()).filter(Boolean));
+    const exclude = new Set(String(process.env.JIRA_ASSIGNMENT_EXCLUDE || 'Bill Cuevas').split(/[;,\s]+/).map(s=>s.trim().toLowerCase()).filter(Boolean));
     const names = rawList
-      .split(/[;,
-]+/)
+      .split(/[;,\s]+/)
       .map(s=> s.split('|')[0].trim())
       .filter(Boolean)
       .filter(n => !exclude.has(n.toLowerCase()));

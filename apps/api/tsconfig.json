@@ -18,6 +18,7 @@
     "src"
   ],
   "exclude": [
+    "**/*.spec.ts",
     "src/routes/**",
     "src/controllers/**",
     "src/db/migrations/**",

@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Jira Force Start API Tests', () => {
     test.beforeEach(async ({ request }) => {
-        // Set environment variables for the tests
         process.env.JIRA_DOMAIN = 'test-domain';
         process.env.JIRA_EMAIL = 'test-email';
         process.env.JIRA_API_TOKEN = 'test-token';
@@ -11,7 +10,6 @@ test.describe('Jira Force Start API Tests', () => {
     });
 
     test('should throw BadRequestException for missing environment variables', async ({ request }) => {
-        // Clear all required environment variables
         process.env.JIRA_DOMAIN = '';
         process.env.JIRA_EMAIL = '';
         process.env.JIRA_API_TOKEN = '';
