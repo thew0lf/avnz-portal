@@ -60,4 +60,13 @@ describe('JiraForceController', () => {
         const response = await controller.forceStart({ body: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
     });
+
+    it('should handle boundary tests for 0 keys', async () => {
+        await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
+    it('should handle boundary tests for 1 key', async () => {
+        const response = await controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
+    });
 });
