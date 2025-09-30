@@ -19,4 +19,12 @@ describe('JiraAssignController', () => {
         process.env.JIRA_API_TOKEN = '';
         await expect(controller.assignDev({ headers: { 'x-service-token': 'token' }, body: { keys: [] } })).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw BadRequestException for multiple missing environment variables', async () => {
+        process.env.JIRA_DOMAIN = '';
+        process.env.JIRA_EMAIL = '';
+        process.env.JIRA_API_TOKEN = '';
+        process.env.JIRA_DEFAULT_ORG_CODE = '';
+        await expect(controller.assignDev({ headers: { 'x-service-token': 'token' }, body: { keys: [] } })).rejects.toThrow(BadRequestException);
+    });
 });
