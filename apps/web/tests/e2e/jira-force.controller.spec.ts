@@ -79,4 +79,36 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing keys. Please provide valid keys.');
     });
+
+    test('should throw BadRequestException for missing required environment variables', async ({ request }) => {
+        const originalServiceToken = process.env.SERVICE_TOKEN;
+        process.env.SERVICE_TOKEN = '';
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Missing required JIRA environment variables.');
+        process.env.SERVICE_TOKEN = originalServiceToken; // Rollback
+    });
+
+    test('should implement performance tests for large input', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: Array(10000).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
+    });
+
+    test('should implement security tests for SQL injection', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
+    });
 });
