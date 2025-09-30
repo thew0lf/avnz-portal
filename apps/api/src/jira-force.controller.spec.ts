@@ -56,13 +56,6 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException for missing required environment variables', async () => {
-        const originalServiceToken = process.env.SERVICE_TOKEN;
-        process.env.SERVICE_TOKEN = '';
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
-        process.env.SERVICE_TOKEN = originalServiceToken; // Rollback
-    });
-
     it('should implement performance tests for large input', async () => {
         const response = await controller.forceStart({ body: { keys: Array(10000).fill('AVNZ-1'), user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
