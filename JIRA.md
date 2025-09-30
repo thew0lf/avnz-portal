@@ -14,10 +14,3 @@ JIRA_DOMAIN=tandgconsulting.atlassian.net
 JIRA_PROJECT_KEY=your_project_key_here
 JIRA_DEFAULT_ORG_CODE=your_org_code_here
 ```
-
-### Important Variables
-- **JIRA_DOMAIN**: Your Jira domain.
-- **JIRA_EMAIL**: Email used for Jira.
-- **JIRA_API_TOKEN**: API token for authentication.
-- **JIRA_PROJECT_KEY**: Key for the Jira project.
-- **JIRA_DEFAULT_ORG_CODE**: Default organization code.
