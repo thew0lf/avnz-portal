@@ -21,7 +21,13 @@ export class JiraForceController {
     const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
     const projectKey = process.env.JIRA_PROJECT_KEY || '';
     if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
+
     // Simulate external service call and handle failure
-    // ... rest of the code remains unchanged
+    try {
+      // Simulated external service logic here
+      throw new Error('External service call failed.');
+    } catch (error) {
+      throw new BadRequestException('External service call failed.');
+    }
   }
 }
