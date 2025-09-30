@@ -11,4 +11,5 @@ Create a `.env` file in the project root with:
 JIRA_EMAIL=bill@tandgconsulting.com
 JIRA_API_TOKEN=your_api_token_here
 JIRA_DOMAIN=tandgconsulting.atlassian.net
+JIRA_DEFAULT_ORG_CODE=your_org_code_here
 ```
