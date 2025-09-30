@@ -2,12 +2,7 @@
   "scripts": {
     "test:e2e": "playwright test"
   },
-  "playwright": {
-    "testDir": "apps/web/tests/e2e",
-    "timeout": 30000,
-    "use": {
-      "headless": true,
-      "trace": "on-first-retry"
-    }
+  "devDependencies": {
+    "@playwright/test": "^1.0.0"
   }
 }
