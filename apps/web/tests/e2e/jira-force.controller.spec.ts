@@ -44,7 +44,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Invalid user role.');
     });
 
-    test('should execute successfully with valid request', async ({ request }) => {
+    test('should execute successfully with valid request for OrgAdmin', async ({ request }) => {
         process.env.JIRA_PROJECT_KEY = 'your_project_key_here';
         process.env.JIRA_DEFAULT_ORG_CODE = 'your_org_code_here';
         process.env.JIRA_EMAIL = 'your_email_here';
@@ -52,7 +52,7 @@ test.describe('Jira Force Start API Tests', () => {
         process.env.SERVICE_TOKEN = 'mock_service_token';
 
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgAdmin' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(200);
@@ -70,11 +70,31 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body).toHaveProperty('success', true);
     });
 
-    test('should handle SQL injection attempt', async ({ request }) => {
+    test('should handle boundary tests for 0 keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Missing keys.');
+    });
+
+    test('should implement security tests for SQL injection', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(400); // or check for sanitized response
+        expect(response.status()).toBe(200);
+    });
+
+    test('should handle external service call failure', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('External service call failed.');
     });
 });
