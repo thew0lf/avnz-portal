@@ -2,7 +2,7 @@
   "scripts": {
     "test:e2e": "playwright test"
   },
-  "dependencies": {
+  "devDependencies": {
     "@playwright/test": "^1.0.0"
   }
 }
