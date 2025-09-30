@@ -31,6 +31,7 @@ import { SpecAuthController } from "./spec-auth.controller.js";
 import { SlackController } from "./slack.controller.js";
 import { JiraController } from "./jira.controller.js";
 import { JiraForceController } from "./jira-force.controller.js";
+import { JiraAssignController } from "./jira-assign.controller.js";
 import { AdminSecretsTokenController } from "./admin-secrets-token.controller.js";
 import { AuthzService } from "./authz/authz.service.js";
 import { RbacGuard } from "./authz/rbac.guard.js";
@@ -46,7 +47,7 @@ let AppModule = class AppModule {
     configure(c) { c.apply(securityHeadersMiddleware, rateLimitMiddleware, authMiddleware, routeGuardMiddleware).forRoutes("*"); }
 };
 AppModule = __decorate([
-    Module({ controllers: [HealthController, MeController, UsageController, ComplianceController, PricingController, AuthController, OrgsController, ClientsController, ProjectsController, MembershipsController, RolesController, ProjectMembersController, CheckController, NodesController, AdminController, OutboxController, SpecController, SpecAuthController, BillingController, SlackController, JiraController, JiraForceController, AdminSecretsTokenController], providers: [AuthzService, RbacGuard, { provide: APP_GUARD, useClass: RbacGuard }] })
+    Module({ controllers: [HealthController, MeController, UsageController, ComplianceController, PricingController, AuthController, OrgsController, ClientsController, ProjectsController, MembershipsController, RolesController, ProjectMembersController, CheckController, NodesController, AdminController, OutboxController, SpecController, SpecAuthController, BillingController, SlackController, JiraController, JiraForceController, JiraAssignController, AdminSecretsTokenController], providers: [AuthzService, RbacGuard, { provide: APP_GUARD, useClass: RbacGuard }] })
 ], AppModule);
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, { cors: true });
