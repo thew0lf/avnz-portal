@@ -55,4 +55,11 @@ describe('JiraForceController', () => {
     it('should handle boundary tests for 0 keys', async () => {
         await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw BadRequestException for missing required environment variables', async () => {
+        const originalServiceToken = process.env.SERVICE_TOKEN;
+        process.env.SERVICE_TOKEN = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+        process.env.SERVICE_TOKEN = originalServiceToken; // Rollback
+    });
 });
