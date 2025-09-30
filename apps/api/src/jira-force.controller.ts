@@ -1,21 +1,29 @@
-import { BadRequestException, Controller, Post, Req } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Controller, Post, Req } from '@nestjs/common';
 import { pool } from './db.js';
 
 @Controller('jira')
 export class JiraForceController {
+  private validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager', 'OrgStaff', 'OrgEmployee'];
+
   @Post('force-start')
-  async forceStart(@Req() req: any){
+  async forceStart(@Req() req: any) {
     const token = String(req.headers['x-service-token'] || '');
     const expected = process.env.SERVICE_TOKEN || '';
     if (!expected || token !== expected) throw new BadRequestException('unauthorized');
+
     const body = req.body || {};
     const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
     if (!keys.length) throw new BadRequestException('missing keys');
+
     const domain = process.env.JIRA_DOMAIN || '';
     const email = process.env.JIRA_EMAIL || '';
     const apiToken = process.env.JIRA_API_TOKEN || '';
     const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
     if (!domain || !email || !apiToken || !orgCode) throw new BadRequestException('missing_jira_env');
+
+    const userRole = body.user?.role;
+    if (!this.validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role');
+
     const basic = Buffer.from(`${email}:${apiToken}`).toString('base64');
     const c = await pool.connect();
     try {
@@ -28,7 +36,7 @@ export class JiraForceController {
         const issueKey = String(key || '');
         const infoRes = await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}?fields=summary,description`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } });
         if (!infoRes.ok) { results.push({ key, error: `fetch_info_${infoRes.status}` }); continue; }
-        const info: any = await infoRes.json().catch(()=>({}));
+        const info: any = await infoRes.json().catch(() => ({}));
         const fields = info?.fields || {};
         const summary = String(fields.summary || '');
         const desc = fields.description;
@@ -37,22 +45,22 @@ export class JiraForceController {
         if (!hasSections) {
           const adf = {
             type: 'doc', version: 1, content: [
-              { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'Context' }]},
-              { type:'paragraph', content:[{ type:'text', text:`Implement ${issueKey} per repo conventions (RBAC, soft-delete, SPA forms).` }]},
-              { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'User Story' }]},
-              { type:'paragraph', content:[{ type:'text', text:'As a developer, I want to implement this ticket according to project standards so that the feature integrates safely and predictably.' }]},
-              { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'Acceptance Criteria' }]},
-              { type:'bulletList', content:[
-                { type:'listItem', content:[{ type:'paragraph', content:[{ type:'text', text:'Code compiles and lints pass; tests added and passing' }]}]},
-                { type:'listItem', content:[{ type:'paragraph', content:[{ type:'text', text:'SUMMARY.MD updated' }]}]}
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Context' }] },
+              { type: 'paragraph', content: [{ type: 'text', text: `Implement ${issueKey} per repo conventions (RBAC, soft-delete, SPA forms).` }] },
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'User Story' }] },
+              { type: 'paragraph', content: [{ type: 'text', text: 'As a developer, I want to implement this ticket according to project standards so that the feature integrates safely and predictably.' }] },
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Acceptance Criteria' }] },
+              { type: 'bulletList', content: [
+                { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Code compiles and lints pass; tests added and passing' }]}]},
+                { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'SUMMARY.MD updated' }]}]}
               ]},
-              { type:'heading', attrs:{ level:3 }, content:[{ type:'text', text:'Testing & QA' }]},
-              { type:'bulletList', content:[
-                { type:'listItem', content:[{ type:'paragraph', content:[{ type:'text', text:'Unit tests for API/Web; QA Playwright spec for user flow' }]}]}
+              { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Testing & QA' }] },
+              { type: 'bulletList', content: [
+                { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Unit tests for API/Web; QA Playwright spec for user flow' }]}]}
               ]}
             ]
           };
-          await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { method:'PUT', headers: { 'Authorization': `Basic ${basic}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { description: adf } }) });
+          await fetch(`https://${domain}/rest/api/3/issue/${encodeURIComponent(issueKey)}`, { method: 'PUT', headers: { 'Authorization': `Basic ${basic}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { description: adf } }) });
           updatedDesc++;
         }
       }
