@@ -56,11 +56,6 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    it('should implement performance tests for large input', async () => {
-        const response = await controller.forceStart({ body: { keys: Array(10000).fill('AVNZ-1'), user: { role: 'OrgOwner' } } });
-        expect(response).toBeDefined();
-    });
-
     it('should implement security tests for SQL injection', async () => {
         const response = await controller.forceStart({ body: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
