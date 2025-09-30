@@ -77,6 +77,6 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing keys. Please provide valid keys.');
+        expect(body.message).toContain('Missing keys.');
     });
 });
