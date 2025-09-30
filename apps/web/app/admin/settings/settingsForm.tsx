@@ -73,6 +73,21 @@ export default function SettingsForm({ profile, preferences }: any){
       <section className="space-y-4 md:col-span-3">
         <div>
           <h2 className="text-lg font-medium">Profile</h2>
+          <form onSubmit={saveProfile} className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-muted-foreground">First Name</label>
+                <Input value={pf.first_name} onChange={e=>setPf({...pf, first_name: e.target.value})} placeholder="First Name" />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground">Last Name</label>
+                <Input value={pf.last_name} onChange={e=>setPf({...pf, last_name: e.target.value})} placeholder="Last Name" />
+              </div>
+            </div>
+            <div>
+              <Button type="submit">Save Profile</Button>
+            </div>
+          </form>
         </div>
       </section>
     </div>

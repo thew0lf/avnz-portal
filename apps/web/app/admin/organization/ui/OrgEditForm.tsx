@@ -18,7 +18,7 @@ export default function OrgEditForm({ org }: { org: any }){
       const trimmed = code.trim();  
       if (trimmed.length > 0 && !/^[a-z0-9-]{3,32}$/.test(trimmed)) { setServerError('Code must be 3-32 chars: lowercase letters, numbers, hyphens'); return; }  
       if (trimmed && trimmed !== initialCodeRef.current) {  
-        const proceed = confirm('Changing the organization code can impact legacy integrations that reference the old code. Are you sure you want to proceed?');  
+        const proceed = window.confirm('Changing the organization code can impact legacy integrations that reference the old code. Are you sure you want to proceed?');  
         if (!proceed) return;  
       }  
       const body: any = { name };  
