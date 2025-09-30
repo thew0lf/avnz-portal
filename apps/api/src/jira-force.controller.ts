@@ -6,10 +6,10 @@ export class JiraForceController {
   async forceStart(@Req() req: any){
     const token = String(req.headers['x-service-token'] || '');
     const expected = process.env.SERVICE_TOKEN || '';
-    if (!expected || token !== expected) throw new ForbiddenException('Unauthorized access. Please check your service token.');
+    if (!expected || token !== expected) throw new ForbiddenException('Unauthorized access.');
     const body = req.body || {};
     const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
-    if (!keys.length) throw new BadRequestException('Missing keys. Please provide valid keys.');
+    if (!keys.length) throw new BadRequestException('Missing keys.');
 
     const userRole = body.user?.role;
     const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
