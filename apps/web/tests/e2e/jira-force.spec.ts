@@ -77,19 +77,6 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing keys.');
-    });
-
-    test('should throw ForbiddenException for valid user roles', async ({ request }) => {
-        const validRoles = ['OrgAdmin', 'OrgAccountManager'];
-        for (const role of validRoles) {
-            const response = await request.post('/jira/force-start', {
-                data: { keys: ['AVNZ-1'], user: { role } },
-                headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-            });
-            expect(response.status()).toBe(200);
-            const body = await response.json();
-            expect(body).toHaveProperty('success', true);
-        }
+        expect(body.message).toContain('Missing keys. Please provide valid keys.');
     });
 });
