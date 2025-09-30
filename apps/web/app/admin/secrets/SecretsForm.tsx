@@ -1,26 +1,25 @@
-"use client"
-import * as React from 'react'
-import { useToast } from '@/components/ui/toast-provider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import SearchableRSelect from '@/components/ui/searchable-rselect'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ActionButton } from '@/components/admin/ActionButton'
+import * as React from 'react';
+import { useToast } from '@/components/ui/toast-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import SearchableRSelect from '@/components/ui/searchable-rselect';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ActionButton } from '@/components/admin/ActionButton';
 
 export default function SecretsForm({ clients, configs, nodeId }: any){
-  const { success, error } = useToast()
+  const { success, error } = useToast();
   const groups = React.useMemo(()=>{
-    const g: Record<string, any[]> = {}
-    for (const c of clients||[]) { const k = String(c.name||'').charAt(0).toUpperCase() || '#'; (g[k] ||= []).push(c) }
-    return Object.entries(g).sort(([a],[b])=>a.localeCompare(b))
-  },[clients])
-  const [clientId, setClientId] = React.useState('')
+    const g: Record<string, any[]> = {};
+    for (const c of clients||[]) { const k = String(c.name||'').charAt(0).toUpperCase() || '#'; (g[k] ||= []).push(c); }
+    return Object.entries(g).sort(([a],[b])=>a.localeCompare(b));
+  },[clients]);
+  const [clientId, setClientId] = React.useState('');
   async function onSubmit(e: React.FormEvent<HTMLFormElement>){
-    e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    const body:any = { service: String(fd.get('service')||''), name: String(fd.get('name')||''), value: String(fd.get('value')||''), client_id: String(fd.get('client_id')||'')||undefined }
-    const r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/admin/services/configs?nodeId='+encodeURIComponent(nodeId), method:'POST', body }) })
-    if (r.ok) success('Saved'); else error('We couldn’t save this secret. Please try again.')
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const body:any = { service: String(fd.get('service')||''), name: String(fd.get('name')||''), value: String(fd.get('value')||''), client_id: String(fd.get('client_id')||'')||undefined };
+    const r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/admin/services/configs?nodeId='+encodeURIComponent(nodeId), method:'POST', body }) });
+    if (r.ok) success('Saved'); else error('We couldn’t save this secret. Please try again.');
   }
   return (
     <div className="space-y-4">
@@ -70,22 +69,6 @@ export default function SecretsForm({ clients, configs, nodeId }: any){
           </TableBody>
         </Table>
       </div>
-      <div className="md:hidden grid gap-2">
-        {configs.map((c:any)=>(
-          <div key={c.id} className="rounded border bg-white p-3">
-            <div className="text-sm font-medium flex items-center gap-2">{c.service} · {c.name} {c.deleted_at ? <span className="text-xs rounded bg-red-100 text-red-700 px-2 py-0.5">Deleted</span> : null}</div>
-            <div className="text-xs text-muted-foreground">Client: {c.client_id || 'Org default'}</div>
-            <div className="text-xs">Updated: {new Date(c.updated_at).toLocaleString('en-US',{ timeZone:'UTC' })}</div>
-            <div className="mt-2">
-              {c.deleted_at ? (
-                <ActionButton variant="secondary" label="Restore" method="POST" path={`/admin/services/configs/${encodeURIComponent(c.id)}/restore`} />
-              ) : (
-                <ActionButton variant="secondary" label="Delete" method="DELETE" path={`/admin/services/configs/${encodeURIComponent(c.id)}`} />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
-  )
+  );
 }
