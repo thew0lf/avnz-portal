@@ -33,9 +33,9 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException for unauthorized access', async () => {
+    it('should throw ForbiddenException for unauthorized access', async () => {
         process.env.SERVICE_TOKEN = 'valid_token';
-        await expect(controller.forceStart({ headers: { 'x-service-token': 'invalid_token' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+        await expect(controller.forceStart({ headers: { 'x-service-token': 'invalid_token' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException for invalid user role', async () => {
