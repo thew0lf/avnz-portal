@@ -1,4 +1,5 @@
 import { BadRequestException, Controller, Post, Req } from '@nestjs/common'
+import { pool } from './db.js'
 
 @Controller('jira')
 export class JiraAssignController {
@@ -34,6 +35,43 @@ export class JiraAssignController {
         }
       } catch {}
       if (!keys || keys.length === 0) return { ok:false, error:'no_cto_issues_found' }
+    }
+    // If no keys and target=org-managers, collect all issues currently assigned to org managers (with first+last name set)
+    if ((!keys || keys.length === 0) && (target === 'org-managers')) {
+      const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || ''
+      if (!orgCode) throw new BadRequestException('missing_org_code')
+      const c = await pool.connect()
+      try {
+        const or = await c.query('select id from organizations where lower(code)=lower($1) limit 1', [orgCode])
+        const orgId: string | undefined = or.rows[0]?.id
+        if (!orgId) throw new BadRequestException('unknown_org')
+        const mr = await c.query(
+          'select up.first_name, up.last_name from memberships m join users u on u.id=m.user_id left join user_profiles up on up.user_id=u.id where m.org_id=$1 and m.role=$2 and coalesce(up.first_name, \'') <> \'\' and coalesce(up.last_name, \'') <> \'\'',
+          [orgId, 'org']
+        )
+        const names: string[] = (mr.rows || []).map((r:any)=> `${r.first_name} ${r.last_name}`.trim()).filter(Boolean)
+        const acctIds: string[] = []
+        for (const name of names){
+          try {
+            const q = encodeURIComponent(name)
+            const uRes = await fetch(`https://${domain}/rest/api/3/user/search?query=${q}`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+            const arr: any[] = await uRes.json().catch(()=>[])
+            const acct = arr?.[0]?.accountId || ''
+            if (acct) acctIds.push(acct)
+          } catch {}
+        }
+        const keySet = new Set<string>()
+        for (const acct of acctIds){
+          try {
+            const jql = encodeURIComponent(`project = ${project} AND assignee = accountId("${acct}") AND statusCategory != Done`)
+            const sr = await fetch(`https://${domain}/rest/api/3/search?jql=${jql}&maxResults=100&fields=key`, { headers: { 'Authorization': `Basic ${basic}`, 'Accept': 'application/json' } })
+            const data: any = await sr.json().catch(()=>({ issues: [] }))
+            for (const it of (data.issues||[])) { if (it?.key) keySet.add(String(it.key)) }
+          } catch {}
+        }
+        keys = Array.from(keySet)
+      } finally { c.release() }
+      if (!keys || keys.length === 0) return { ok:false, error:'no_org_manager_issues_found' }
     }
     if (!keys || keys.length === 0) throw new BadRequestException('missing keys')
 

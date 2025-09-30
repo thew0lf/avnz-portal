@@ -57,7 +57,7 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
             </form>
             <ActionButton path={`/jira/requeue-stale?minutes=${minutes}`} label="Requeue All Stale" variant="default" />
             <ActionButton path={`/jira/force-start`} label="Force Start AVNZ-11..15" variant="secondary" body={{ keys: ['AVNZ-11','AVNZ-12','AVNZ-13','AVNZ-14','AVNZ-15'] }} />
-            <ActionButton path={`/jira/assign-dev?target=cto`} label="Reassign Devs" variant="secondary" />
+            <ActionButton path={`/jira/assign-dev?target=org-managers`} label="Reassign Devs" variant="secondary" />
             <ActionButton path={`/admin/services/configs/persist-jira-assignees`} label="Persist Assignment Lists" variant="secondary" />
           </div>
           <JiraStaleTable rows={rowsStale} />
