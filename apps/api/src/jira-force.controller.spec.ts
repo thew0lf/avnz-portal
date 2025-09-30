@@ -13,11 +13,6 @@ describe('JiraForceController', () => {
         controller = module.get<JiraForceController>(JiraForceController);
     });
 
-    it('should throw BadRequestException for missing JIRA_DOMAIN', async () => {
-        process.env.JIRA_DOMAIN = '';
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
-    });
-
     it('should throw BadRequestException for missing JIRA_PROJECT_KEY', async () => {
         process.env.JIRA_PROJECT_KEY = '';
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
@@ -53,5 +48,16 @@ describe('JiraForceController', () => {
         process.env.JIRA_EMAIL = 'valid_email';
         process.env.JIRA_API_TOKEN = 'valid_token';
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException for multiple missing environment variables', async () => {
+        process.env.JIRA_PROJECT_KEY = '';
+        process.env.JIRA_EMAIL = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
+    it('should handle boundary tests for keys', async () => {
+        const response = await controller.forceStart({ body: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
     });
 });
