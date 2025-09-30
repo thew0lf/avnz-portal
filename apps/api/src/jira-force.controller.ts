@@ -6,20 +6,20 @@ export class JiraForceController {
   async forceStart(@Req() req: any){
     const token = String(req.headers['x-service-token'] || '');
     const expected = process.env.SERVICE_TOKEN || '';
-    if (!expected || token !== expected) throw new BadRequestException('unauthorized');
+    if (!expected || token !== expected) throw new BadRequestException('Unauthorized access. Please check your service token.');
     const body = req.body || {};
     const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
-    if (!keys.length) throw new BadRequestException('missing keys');
+    if (!keys.length) throw new BadRequestException('Missing keys. Please provide valid keys.');
 
     const userRole = body.user?.role;
     const validRoles = ['OrgOwner', 'OrgAdmin'];
-    if (!validRoles.includes(userRole)) throw new ForbiddenException('invalid user role');
+    if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');
 
     const domain = process.env.JIRA_DOMAIN || '';
     const email = process.env.JIRA_EMAIL || '';
     const apiToken = process.env.JIRA_API_TOKEN || '';
     const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
-    if (!domain || !email || !apiToken || !orgCode) throw new BadRequestException('missing_jira_env');
+    if (!domain || !email || !apiToken || !orgCode) throw new BadRequestException('Missing required JIRA environment variables.');
     // ... rest of the code remains unchanged
   }
 }
