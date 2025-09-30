@@ -85,8 +85,8 @@ test.describe('Jira Force Start API Tests', () => {
             data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(200);
+        expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body).toHaveProperty('success', true);
+        expect(body.message).toContain('Invalid input.');
     });
 });
