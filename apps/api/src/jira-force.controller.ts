@@ -18,6 +18,6 @@ export class JiraController {
 }
 
 function isAuthorized(user: any) {
-    const validRoles = ['OrgOwner', 'OrgAdmin'];
+    const validRoles = ['OrgOwner', 'OrgAdmin']; // Define valid roles
     return user && user.role && validRoles.includes(user.role);
 }
