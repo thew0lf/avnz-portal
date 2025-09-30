@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Jira Force Start API Tests', () => {
-    
     test('should throw ForbiddenException for invalid user role', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } }
