@@ -36,4 +36,13 @@ test('should throw ForbiddenException for invalid user role', async ({ request }
     expect(body.message).toContain('unknown_org');
   });
 
+  test('should return 200 OK for valid request', async ({ request }) => {
+    const response = await request.post('/jira/force-start', {
+      data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' }, orgCode: 'ValidOrgCode' }
+    });
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body).toHaveProperty('results'); // Assuming the response contains a 'results' field
+  });
+
 });
