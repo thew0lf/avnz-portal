@@ -12,6 +12,9 @@ export class JiraController {
         if (!process.env.JIRA_API_TOKEN) {
             throw new BadRequestException('JIRA_API_TOKEN is required.');
         }
+        if (!process.env.JIRA_PROJECT_KEY) {
+            throw new BadRequestException('JIRA_PROJECT_KEY is required.');
+        }
         if (!process.env.JIRA_DEFAULT_ORG_CODE) {
             throw new BadRequestException('JIRA_DEFAULT_ORG_CODE is required.');
         }
