@@ -45,10 +45,10 @@ test.describe('Jira Force Start API Tests', () => {
     });
 
     test('should execute successfully with valid request', async ({ request }) => {
-        process.env.JIRA_PROJECT_KEY = 'your_project_key_here';
-        process.env.JIRA_DEFAULT_ORG_CODE = 'your_org_code_here';
-        process.env.JIRA_EMAIL = 'your_email_here';
-        process.env.JIRA_API_TOKEN = 'your_api_token_here';
+        process.env.JIRA_PROJECT_KEY = 'mock_project_key';
+        process.env.JIRA_DEFAULT_ORG_CODE = 'mock_org_code';
+        process.env.JIRA_EMAIL = 'mock_email';
+        process.env.JIRA_API_TOKEN = 'mock_api_token';
         process.env.SERVICE_TOKEN = 'mock_service_token';
 
         const response = await request.post('/jira/force-start', {
