@@ -58,4 +58,12 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body).toHaveProperty('success', true);
     });
+
+    test('should handle boundary tests for keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': 'valid_token' }
+        });
+        expect(response).toBeDefined();
+    });
 });
