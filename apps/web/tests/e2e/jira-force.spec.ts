@@ -44,7 +44,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Invalid user role.');
     });
 
-    test('should execute successfully with valid request for OrgOwner', async ({ request }) => {
+    test('should execute successfully with valid request for OrgAdmin', async ({ request }) => {
         process.env.JIRA_PROJECT_KEY = 'your_project_key_here';
         process.env.JIRA_DEFAULT_ORG_CODE = 'your_org_code_here';
         process.env.JIRA_EMAIL = 'your_email_here';
@@ -52,7 +52,7 @@ test.describe('Jira Force Start API Tests', () => {
         process.env.SERVICE_TOKEN = 'mock_service_token';
 
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgAdmin' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(200);
