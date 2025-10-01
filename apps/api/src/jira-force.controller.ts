@@ -18,6 +18,13 @@ export class JiraForceController {
     if (!userRole) throw new BadRequestException('User object is required.');
     if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');
 
+    const domain = process.env.JIRA_DOMAIN || '';
+    const email = process.env.JIRA_EMAIL || '';
+    const apiToken = process.env.JIRA_API_TOKEN || '';
+    const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
+    const projectKey = process.env.JIRA_PROJECT_KEY || '';
+    if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
+
     // Simulate external service call and handle failure
     try {
       // Simulated external service logic here
