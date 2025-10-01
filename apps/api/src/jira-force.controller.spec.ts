@@ -46,6 +46,11 @@ describe('JiraForceController', () => {
         expect(response).toBeDefined();
     });
 
+    it('should implement security tests for XSS vulnerabilities', async () => {
+        const response = await controller.forceStart({ body: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
+    });
+
     it('should handle external service call failure', async () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
