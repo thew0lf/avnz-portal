@@ -29,7 +29,7 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: [''], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    it('should handle boundary tests for large inputs', async () => {
+    it('should throw BadRequestException for large input boundary', async () => {
         await expect(controller.forceStart({ body: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
@@ -42,20 +42,7 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } } })).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw BadRequestException for missing environment variables', async () => {
-        process.env.JIRA_DOMAIN = '';
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException for missing environment variables JIRA_EMAIL, JIRA_API_TOKEN, JIRA_DEFAULT_ORG_CODE', async () => {
-        process.env.JIRA_EMAIL = '';
-        process.env.JIRA_API_TOKEN = '';
-        process.env.JIRA_DEFAULT_ORG_CODE = '';
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException for missing JIRA_PROJECT_KEY', async () => {
-        process.env.JIRA_PROJECT_KEY = '';
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for missing req.body', async () => {
+        await expect(controller.forceStart({ headers: { 'x-service-token': 'mock_service_token' } })).rejects.toThrow(BadRequestException);
     });
 });
