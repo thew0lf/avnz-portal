@@ -11,6 +11,7 @@ export class JiraForceController {
     if (typeof body !== 'object') throw new BadRequestException('Invalid request body.');
     const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
     if (!keys.length) throw new BadRequestException('Missing keys.');
+    if (keys.some(key => key.trim() === '')) throw new BadRequestException('Invalid keys format.');
 
     const userRole = body.user?.role;
     const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
