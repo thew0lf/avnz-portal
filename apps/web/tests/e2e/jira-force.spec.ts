@@ -10,7 +10,7 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing user object.');
+        expect(body.message).toContain('User object is required.');
     });
 
     test('should throw BadRequestException for invalid keys format', async ({ request }) => {
@@ -79,6 +79,6 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing user object.');
+        expect(body.message).toContain('User object is required.');
     });
 });

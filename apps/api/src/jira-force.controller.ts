@@ -14,6 +14,7 @@ export class JiraForceController {
 
     const userRole = body.user?.role;
     const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
+    if (!userRole) throw new BadRequestException('User object is required.');
     if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');
 
     const domain = process.env.JIRA_DOMAIN || '';
