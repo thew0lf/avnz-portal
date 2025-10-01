@@ -8,6 +8,7 @@ export class JiraForceController {
     const expected = process.env.SERVICE_TOKEN || '';
     if (!expected || token !== expected) throw new ForbiddenException('Unauthorized access.');
     const body = req.body || {};
+    if (typeof body !== 'object') throw new BadRequestException('Invalid request body.');
     const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
     if (!keys.length) throw new BadRequestException('Missing keys.');
 
