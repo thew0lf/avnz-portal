@@ -46,4 +46,9 @@ describe('JiraForceController', () => {
         process.env.JIRA_DOMAIN = '';
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw BadRequestException for missing environment variable details', async () => {
+        process.env.JIRA_DOMAIN = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
 });
