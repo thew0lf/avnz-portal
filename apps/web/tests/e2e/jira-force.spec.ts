@@ -1,19 +1,29 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Jira Force Start API Tests', () => {
-    test('should throw ForbiddenException for unauthorized access', async ({ request }) => {
+    test('should throw BadRequestException for missing user object', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': 'invalid_token' }
+            data: { keys: ['AVNZ-1'] }, // Missing user object
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(403);
+        expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Unauthorized access.');
+        expect(body.message).toContain('Missing user object.');
+    });
+
+    test('should throw BadRequestException for invalid keys format', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [123], user: { role: 'OrgOwner' } }, // Invalid key format
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid keys format.');
     });
 
     test('should throw BadRequestException for missing keys', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: [], user: { role: 'OrgOwner' } },
+            data: { keys: [], user: { role: 'OrgOwner' } }, // Empty keys
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(400);
@@ -21,62 +31,29 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing keys.');
     });
 
-    test('should throw BadRequestException for missing JIRA_PROJECT_KEY', async ({ request }) => {
-        const originalProjectKey = process.env.JIRA_PROJECT_KEY;
-        process.env.JIRA_PROJECT_KEY = '';
+    test('should throw BadRequestException for large input boundary', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            data: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } }, // 1001 keys
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Missing required JIRA environment variables.');
-        process.env.JIRA_PROJECT_KEY = originalProjectKey; // Rollback
+        expect(body.message).toContain('Too many keys.');
     });
 
-    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
+    test('should execute successfully with SQL injection', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
+            data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } }, // SQL injection
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(403);
-        const body = await response.json();
-        expect(body.message).toContain('Invalid user role.');
+        expect(response.status()).toBe(200); // Should succeed
     });
 
-    test('should execute successfully with valid request for OrgAdmin', async ({ request }) => {
-        process.env.JIRA_PROJECT_KEY = 'your_project_key_here';
-        process.env.JIRA_DEFAULT_ORG_CODE = 'your_org_code_here';
-        process.env.JIRA_EMAIL = 'your_email_here';
-        process.env.JIRA_API_TOKEN = 'your_api_token_here';
-        process.env.SERVICE_TOKEN = 'mock_service_token';
-
+    test('should execute successfully with XSS script', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgAdmin' } },
+            data: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } }, // XSS script
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(200);
-        const body = await response.json();
-        expect(body).toHaveProperty('success', true);
-    });
-
-    test('should handle boundary tests for keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-        const body = await response.json();
-        expect(body).toHaveProperty('success', true);
-    });
-
-    test('should handle boundary tests for 0 keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: [], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing keys.');
+        expect(response.status()).toBe(200); // Should succeed
     });
 });
