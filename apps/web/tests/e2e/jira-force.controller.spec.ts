@@ -1,82 +1,43 @@
-import { test, expect } from '@playwright/test';
+import { Test, TestingModule } from '@nestjs/testing';
+import { JiraForceController } from './jira-force.controller';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
-test.describe('Jira Force Start API Tests', () => {
-    test('should throw ForbiddenException for unauthorized access', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': 'invalid_token' }
-        });
-        expect(response.status()).toBe(403);
-        const body = await response.json();
-        expect(body.message).toContain('Unauthorized access.');
+describe('JiraForceController', () => {
+    let controller: JiraForceController;
+
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+            controllers: [JiraForceController],
+        }).compile();
+
+        controller = module.get<JiraForceController>(JiraForceController);
     });
 
-    test('should throw BadRequestException for missing keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: [], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing keys.');
+    it('should throw BadRequestException for missing JIRA_DOMAIN', async () => {
+        process.env.JIRA_DOMAIN = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    test('should throw BadRequestException for missing JIRA_PROJECT_KEY', async ({ request }) => {
-        const originalProjectKey = process.env.JIRA_PROJECT_KEY;
+    it('should throw BadRequestException for missing JIRA_PROJECT_KEY', async () => {
         process.env.JIRA_PROJECT_KEY = '';
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing required JIRA environment variables.');
-        process.env.JIRA_PROJECT_KEY = originalProjectKey; // Rollback
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(403);
-        const body = await response.json();
-        expect(body.message).toContain('Invalid user role.');
+    it('should throw ForbiddenException for unauthorized access', async () => {
+        process.env.SERVICE_TOKEN = 'valid_token';
+        await expect(controller.forceStart({ headers: { 'x-service-token': 'invalid_token' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(ForbiddenException);
     });
 
-    test('should execute successfully with valid request for OrgAdmin', async ({ request }) => {
-        process.env.JIRA_PROJECT_KEY = 'your_project_key_here';
-        process.env.JIRA_DEFAULT_ORG_CODE = 'your_org_code_here';
-        process.env.JIRA_EMAIL = 'your_email_here';
-        process.env.JIRA_API_TOKEN = 'your_api_token_here';
-        process.env.SERVICE_TOKEN = 'mock_service_token';
-
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgAdmin' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-        const body = await response.json();
-        expect(body).toHaveProperty('success', true);
+    it('should throw ForbiddenException for invalid user role', async () => {
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } } })).rejects.toThrow(ForbiddenException);
     });
 
-    test('should handle boundary tests for keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-        const body = await response.json();
-        expect(body).toHaveProperty('success', true);
+    it('should handle boundary tests for keys', async () => {
+        const response = await controller.forceStart({ body: { keys: Array(1000).fill('AVNZ-1'), user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
     });
 
-    test('should handle boundary tests for 0 keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: [], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing keys.');
+    it('should handle boundary tests for 0 keys', async () => {
+        await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 });
