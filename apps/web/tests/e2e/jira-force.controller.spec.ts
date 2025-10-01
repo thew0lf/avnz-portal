@@ -31,6 +31,16 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing keys.');
     });
 
+    test('should throw BadRequestException for empty string in keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [''], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid keys format.');
+    });
+
     test('should throw BadRequestException for large input boundary', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
