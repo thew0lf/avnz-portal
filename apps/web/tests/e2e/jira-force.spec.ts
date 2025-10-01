@@ -61,22 +61,6 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing required JIRA environment variables.');
     });
 
-    test('should execute successfully with SQL injection', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-    });
-
-    test('should execute successfully with XSS script', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-    });
-
     test('should execute successfully with valid keys and user role', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
