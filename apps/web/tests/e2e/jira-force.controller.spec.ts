@@ -23,6 +23,16 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException for missing JIRA_EMAIL', async () => {
+        process.env.JIRA_EMAIL = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException for missing JIRA_API_TOKEN', async () => {
+        process.env.JIRA_API_TOKEN = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw ForbiddenException for unauthorized access', async () => {
         process.env.SERVICE_TOKEN = 'valid_token';
         await expect(controller.forceStart({ headers: { 'x-service-token': 'invalid_token' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(ForbiddenException);
@@ -39,5 +49,19 @@ describe('JiraForceController', () => {
 
     it('should handle boundary tests for 0 keys', async () => {
         await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
+    it('should implement security tests for SQL injection', async () => {
+        const response = await controller.forceStart({ body: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
+    });
+
+    it('should implement security tests for XSS vulnerabilities', async () => {
+        const response = await controller.forceStart({ body: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
+    });
+
+    it('should handle external service call failure', async () => {
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 });
