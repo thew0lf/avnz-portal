@@ -38,4 +38,9 @@ describe('JiraForceController', () => {
         const response = await controller.forceStart({ body: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
     });
+
+    it('should execute successfully with valid keys and user role', async () => {
+        const response = await controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } });
+        expect(response).toBeDefined();
+    });
 });
