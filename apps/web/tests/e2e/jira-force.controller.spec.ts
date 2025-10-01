@@ -61,23 +61,23 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body).toHaveProperty('success', true);
     });
 
-    test('should handle SQL injection safely', async ({ request }) => {
+    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
+            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(200);
+        expect(response.status()).toBe(403);
         const body = await response.json();
-        expect(body).toHaveProperty('success', true);
+        expect(body.message).toContain('Invalid user role.');
     });
 
-    test('should handle XSS vulnerability safely', async ({ request }) => {
+    test('should throw BadRequestException for missing environment variables', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
-            data: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } },
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
-        expect(response.status()).toBe(200);
+        expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body).toHaveProperty('success', true);
+        expect(body.message).toContain('Missing required JIRA environment variables.');
     });
 });

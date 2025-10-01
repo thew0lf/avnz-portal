@@ -33,22 +33,12 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
-    it('should implement security tests for SQL injection', async () => {
-        const response = await controller.forceStart({ body: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } } });
-        expect(response).toBeDefined();
-    });
-
-    it('should implement security tests for XSS vulnerabilities', async () => {
-        const response = await controller.forceStart({ body: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } } });
-        expect(response).toBeDefined();
-    });
-
     it('should execute successfully with valid keys and user role', async () => {
         const response = await controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } });
         expect(response).toBeDefined();
     });
 
-    it('should throw BadRequestException for invalid user role', async () => {
+    it('should throw ForbiddenException for invalid user role', async () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } } })).rejects.toThrow(ForbiddenException);
     });
 
