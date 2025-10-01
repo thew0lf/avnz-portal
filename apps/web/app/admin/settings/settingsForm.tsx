@@ -77,16 +77,54 @@ export default function SettingsForm({ profile, preferences }: any){
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-muted-foreground">First Name</label>
-                <Input value={pf.first_name} onChange={e=>setPf({...pf, first_name: e.target.value})} placeholder="First Name" />
+                <Input value={pf.first_name} onChange={e=>setPf({...pf, first_name: (e.target as HTMLInputElement).value})} placeholder="First Name" />
               </div>
               <div>
                 <label className="block text-sm text-muted-foreground">Last Name</label>
-                <Input value={pf.last_name} onChange={e=>setPf({...pf, last_name: e.target.value})} placeholder="Last Name" />
+                <Input value={pf.last_name} onChange={e=>setPf({...pf, last_name: (e.target as HTMLInputElement).value})} placeholder="Last Name" />
               </div>
             </div>
-            <div>
-              <Button type="submit">Save Profile</Button>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-muted-foreground">Company</label>
+                <Input value={pf.company} onChange={e=>setPf({...pf, company: (e.target as HTMLInputElement).value})} placeholder="Company" />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground">Phone</label>
+                <Input value={pf.phone} onChange={e=>setPf({...pf, phone: (e.target as HTMLInputElement).value})} placeholder="Phone" />
+              </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-muted-foreground">Address 1</label>
+                <Input value={pf.address1} onChange={e=>setPf({...pf, address1: (e.target as HTMLInputElement).value})} placeholder="Address 1" />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground">Address 2</label>
+                <Input value={pf.address2} onChange={e=>setPf({...pf, address2: (e.target as HTMLInputElement).value})} placeholder="Address 2" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-muted-foreground">City</label>
+                <Input value={pf.city} onChange={e=>setPf({...pf, city: (e.target as HTMLInputElement).value})} placeholder="City" />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground">State/Province</label>
+                <Input value={pf.state_province} onChange={e=>setPf({...pf, state_province: (e.target as HTMLInputElement).value})} placeholder="State/Province" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-muted-foreground">Postal Code</label>
+                <Input value={pf.postal_code} onChange={e=>setPf({...pf, postal_code: (e.target as HTMLInputElement).value})} placeholder="Postal Code" />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground">Country</label>
+                <Input value={pf.country} onChange={e=>setPf({...pf, country: (e.target as HTMLInputElement).value})} placeholder="Country" />
+              </div>
+            </div>
+            <div className="pt-4"><Button type="submit">Save Profile</Button></div>
           </form>
         </div>
       </section>
