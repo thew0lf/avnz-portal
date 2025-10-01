@@ -83,5 +83,7 @@ test.describe('Jira Force Start API Tests', () => {
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
     });
 });
