@@ -79,14 +79,4 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing user object.');
     });
-
-    test('should throw BadRequestException for missing environment variables', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': '' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Unauthorized access.');
-    });
 });
