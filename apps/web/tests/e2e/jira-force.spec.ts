@@ -20,7 +20,7 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Invalid keys format.');
+        expect(body.message).toContain('All keys must be strings.');
     });
 
     test('should throw BadRequestException for missing keys', async ({ request }) => {
@@ -40,7 +40,7 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Invalid keys format.');
+        expect(body.message).toContain('All keys must be strings.');
     });
 
     test('should throw BadRequestException for large input boundary', async ({ request }) => {
