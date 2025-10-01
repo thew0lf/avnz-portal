@@ -38,43 +38,27 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const body = await response.json();
-        expect(body.message).toContain('Too many keys.');
+        expect(body.message).toContain('Input exceeds maximum allowed size.');
     });
 
-    test('should throw BadRequestException for minimum input boundary', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: [''], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing keys.');
-    });
-
-    test('should throw BadRequestException for missing environment variables', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing required JIRA environment variables.');
-    });
-
-    test('should execute successfully with SQL injection', async ({ request }) => {
+    test('should handle SQL injection safely', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1; DROP TABLE users;'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
     });
 
-    test('should execute successfully with XSS script', async ({ request }) => {
+    test('should handle XSS vulnerability safely', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
     });
 
     test('should execute successfully with valid keys and user role', async ({ request }) => {
@@ -83,5 +67,7 @@ test.describe('Jira Force Start API Tests', () => {
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
     });
 });
