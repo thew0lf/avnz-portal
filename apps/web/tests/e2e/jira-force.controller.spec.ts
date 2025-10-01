@@ -81,4 +81,14 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('User object is required.');
     });
+
+    test('should throw BadRequestException for missing environment variables', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': 'invalid_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Missing required JIRA environment variables.');
+    });
 });
