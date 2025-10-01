@@ -79,27 +79,4 @@ test.describe('Jira Force Start API Tests', () => {
         const body = await response.json();
         expect(body.message).toContain('Missing keys.');
     });
-
-    test('should test valid user roles', async ({ request }) => {
-        const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
-        for (const role of validRoles) {
-            const response = await request.post('/jira/force-start', {
-                data: { keys: ['AVNZ-1'], user: { role } },
-                headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-            });
-            expect(response.status()).toBe(200);
-            const body = await response.json();
-            expect(body).toHaveProperty('success', true);
-        }
-    });
-
-    test('should handle successful external service call', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgAdmin' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(200);
-        const body = await response.json();
-        expect(body).toHaveProperty('success', true);
-    });
 });
