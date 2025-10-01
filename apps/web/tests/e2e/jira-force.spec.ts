@@ -81,12 +81,14 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body).toHaveProperty('success', true);
     });
 
-    test('should throw BadRequestException for invalid user role', async ({ request }) => {
+    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(403);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid user role.');
     });
 
     test('should throw BadRequestException for missing environment variables', async ({ request }) => {
@@ -95,5 +97,7 @@ test.describe('Jira Force Start API Tests', () => {
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
         });
         expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Missing required JIRA environment variables.');
     });
 });
