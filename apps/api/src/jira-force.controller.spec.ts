@@ -49,4 +49,13 @@ describe('JiraForceController', () => {
     it('should handle external service call failure', async () => {
         await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
+
+    it('should validate presence of all required environment variables', async () => {
+        process.env.JIRA_DOMAIN = '';
+        process.env.JIRA_EMAIL = '';
+        process.env.JIRA_API_TOKEN = '';
+        process.env.JIRA_DEFAULT_ORG_CODE = '';
+        process.env.JIRA_PROJECT_KEY = '';
+        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
 });
