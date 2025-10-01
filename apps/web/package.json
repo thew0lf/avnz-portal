@@ -2,13 +2,7 @@
   "scripts": {
     "test:e2e": "playwright test"
   },
-  "playwright": {
-    "testDir": "tests/e2e",
-    "timeout": 30000,
-    "reporter": "html",
-    "use": {
-      "baseURL": "http://localhost:3000",
-      "trace": "on-first-retry"
-    }
+  "dependencies": {
+    "@playwright/test": "^1.0.0"
   }
 }
