@@ -25,6 +25,10 @@ describe('JiraForceController', () => {
         await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException for empty string in keys', async () => {
+        await expect(controller.forceStart({ body: { keys: [''], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    });
+
     it('should handle boundary tests for large inputs', async () => {
         await expect(controller.forceStart({ body: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
     });

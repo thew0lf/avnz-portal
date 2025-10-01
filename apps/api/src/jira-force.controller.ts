@@ -11,6 +11,8 @@ export class JiraForceController {
     const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
     if (!keys.length) throw new BadRequestException('Missing keys.');
 
+    if (keys.some(key => key.trim() === '')) throw new BadRequestException('Keys cannot contain empty strings.');
+
     const userRole = body.user?.role;
     const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
     if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');

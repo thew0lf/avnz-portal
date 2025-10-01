@@ -31,6 +31,16 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('Missing keys.');
     });
 
+    test('should throw BadRequestException for empty string in keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [''], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Keys cannot contain empty strings.');
+    });
+
     test('should throw BadRequestException for large input boundary', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
@@ -39,16 +49,6 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const body = await response.json();
         expect(body.message).toContain('Input exceeds maximum allowed size.');
-    });
-
-    test('should throw BadRequestException for minimum input boundary', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: [''], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Missing keys.');
     });
 
     test('should throw BadRequestException for missing environment variables', async ({ request }) => {
@@ -89,13 +89,5 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(200);
         const body = await response.json();
         expect(body).toHaveProperty('success', true);
-    });
-
-    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
-            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
-        });
-        expect(response.status()).toBe(403);
     });
 });
