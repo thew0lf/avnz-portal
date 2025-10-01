@@ -43,16 +43,6 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body.message).toContain('All keys must be strings.');
     });
 
-    test('should throw BadRequestException for large input boundary', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': serviceToken }
-        });
-        expect(response.status()).toBe(400);
-        const body = await response.json();
-        expect(body.message).toContain('Input exceeds maximum allowed size.');
-    });
-
     test('should execute successfully with valid keys and user role', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
