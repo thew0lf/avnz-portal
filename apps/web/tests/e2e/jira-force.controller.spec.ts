@@ -88,7 +88,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(body).toHaveProperty('success', true);
     });
 
-    test('should handle XSS vulnerabilities safely', async ({ request }) => {
+    test('should handle XSS vulnerabilities', async ({ request }) => {
         const response = await request.post('/jira/force-start', {
             data: { keys: ['<script>alert(1)</script>'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
@@ -96,5 +96,15 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(200);
         const body = await response.json();
         expect(body).toHaveProperty('success', true);
+    });
+
+    test('should handle external service call failure', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': process.env.SERVICE_TOKEN || 'mock_service_token' }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('External service call failed.');
     });
 });
