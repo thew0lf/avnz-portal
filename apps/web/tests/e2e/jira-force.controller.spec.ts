@@ -1,48 +1,84 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JiraForceController } from './jira-force.controller';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { test, expect } from '@playwright/test';
 
-describe('JiraForceController', () => {
-    let controller: JiraForceController;
+test.describe('Jira Force Start API Tests', () => {
+    const serviceToken = process.env.SERVICE_TOKEN || 'mock_service_token';
 
-    beforeEach(async () => {
-        const module: TestingModule = await Test.createTestingModule({
-            controllers: [JiraForceController],
-        }).compile();
-
-        controller = module.get<JiraForceController>(JiraForceController);
+    test('should throw BadRequestException for missing user object', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'] },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('User object is required.');
     });
 
-    it('should throw BadRequestException for missing user object', async () => {
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'] } })).rejects.toThrow(BadRequestException);
+    test('should throw BadRequestException for invalid keys format', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [123], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid keys format.');
     });
 
-    it('should throw BadRequestException for invalid keys format', async () => {
-        await expect(controller.forceStart({ body: { keys: [123], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    test('should throw BadRequestException for missing keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Missing keys.');
     });
 
-    it('should throw BadRequestException for missing keys', async () => {
-        await expect(controller.forceStart({ body: { keys: [], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    test('should throw BadRequestException for empty string in keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [''], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid keys format.');
     });
 
-    it('should throw BadRequestException for empty string in keys', async () => {
-        await expect(controller.forceStart({ body: { keys: [''], user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    test('should throw BadRequestException for large input boundary', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('Input exceeds maximum allowed size.');
     });
 
-    it('should throw BadRequestException for large input boundary', async () => {
-        await expect(controller.forceStart({ body: { keys: Array(1001).fill('AVNZ-1'), user: { role: 'OrgOwner' } } })).rejects.toThrow(BadRequestException);
+    test('should execute successfully with valid keys and user role', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(200);
+        const body = await response.json();
+        expect(body).toHaveProperty('success', true);
     });
 
-    it('should execute successfully with valid keys and user role', async () => {
-        const response = await controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } } });
-        expect(response).toBeDefined();
+    test('should throw ForbiddenException for invalid user role', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(403);
+        const body = await response.json();
+        expect(body.message).toContain('Invalid user role.');
     });
 
-    it('should throw ForbiddenException for invalid user role', async () => {
-        await expect(controller.forceStart({ body: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } } })).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should throw BadRequestException for missing req.body', async () => {
-        await expect(controller.forceStart({ headers: { 'x-service-token': 'mock_service_token' } })).rejects.toThrow(BadRequestException);
+    test('should throw BadRequestException for missing req.body', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const body = await response.json();
+        expect(body.message).toContain('User object is required.');
     });
 });
