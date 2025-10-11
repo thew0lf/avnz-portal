@@ -14,15 +14,19 @@ describe('JiraForceController', () => {
         controller = module.get<JiraForceController>(JiraForceController);
     });
 
-    // ... existing tests ...
-
     it('should return CSV format when ?format=csv is requested', async () => {
         const req = { query: { format: 'csv' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } }, headers: { 'x-service-token': 'mock_service_token' } };
         const res = { send: jest.fn(), header: jest.fn() };
 
         await controller.forceStart(req, res);
-        
         expect(res.header).toHaveBeenCalledWith('Content-Type', 'text/csv');
         expect(res.send).toHaveBeenCalled(); // You can further validate the CSV content if needed
+    });
+
+    it('should throw BadRequestException for empty results array when format is csv', async () => {
+        const req = { query: { format: 'csv' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } }, headers: { 'x-service-token': 'mock_service_token' } };
+        const res = { send: jest.fn(), header: jest.fn() };
+
+        await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
     });
 });

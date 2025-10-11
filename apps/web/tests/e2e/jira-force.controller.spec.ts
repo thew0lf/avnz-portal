@@ -43,4 +43,14 @@ test.describe('Jira Force Start API Tests', () => {
         const responseBody = await response.json();
         expect(responseBody.message).toBe('Unauthorized access.');
     });
+
+    test('should return 400 for empty results array when format is csv', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('No data available for CSV generation.');
+    });
 });
