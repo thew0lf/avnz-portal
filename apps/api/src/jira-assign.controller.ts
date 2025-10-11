@@ -152,6 +152,7 @@ export class JiraAssignController {
     }
     if (!keys.length) {
       if (target === 'org-managers') return { ok:false, error:'no_org_manager_issues_found' }
+      if (target === 'exclude') return { ok:false, error:'no_excluded_issues_found' }
       throw new BadRequestException('missing keys')
     }
 
