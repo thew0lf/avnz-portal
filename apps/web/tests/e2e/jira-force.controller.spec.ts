@@ -16,7 +16,7 @@ test.describe('Jira Force Start API Tests', () => {
 
     test('should return 400 for empty results', async ({ request }) => {
         const response = await request.post('/jira/force-start?format=csv', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            data: { keys: [], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': serviceToken }
         });
         expect(response.status()).toBe(400);
