@@ -53,4 +53,24 @@ test.describe('Jira Force Start API Tests', () => {
         const responseBody = await response.json();
         expect(responseBody.message).toBe('Invalid request body.');
     });
+
+    test('should return 400 for missing user role', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: ['AVNZ-1'], user: { role: null } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('User object is required.');
+    });
+
+    test('should return 400 for missing keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('Missing keys.');
+    });
 });
