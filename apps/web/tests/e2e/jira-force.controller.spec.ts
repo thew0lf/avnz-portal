@@ -42,4 +42,14 @@ test.describe('Jira Force Start API Tests', () => {
         const responseBody = await response.json();
         expect(responseBody.message).toBe('Invalid user role.');
     });
+
+    test('should return 400 for missing keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: [], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('Missing keys.');
+    });
 });
