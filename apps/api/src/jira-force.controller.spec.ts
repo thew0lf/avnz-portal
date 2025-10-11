@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JiraForceController } from './jira-force.controller';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { parse } from 'json2csv';
 
 describe('JiraForceController', () => {
     let controller: JiraForceController;
