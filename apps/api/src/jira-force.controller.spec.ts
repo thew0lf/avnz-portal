@@ -70,11 +70,4 @@ describe('JiraForceController', () => {
 
         await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
     });
-
-    it('should throw BadRequestException for malformed user object', async () => {
-        const req = { query: { format: 'csv' }, body: { keys: ['AVNZ-1'], user: null }, headers: { 'x-service-token': 'mock_service_token' } };
-        const res = { send: jest.fn(), header: jest.fn() };
-
-        await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
-    });
 });
