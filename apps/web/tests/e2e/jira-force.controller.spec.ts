@@ -91,6 +91,6 @@ test.describe('Jira Force Start API Tests', () => {
         });
         expect(response.status()).toBe(400);
         const responseBody = await response.json();
-        expect(responseBody.message).toBe('User object is required.');
+        expect(responseBody.message).toBe('Invalid user object.');
     });
 });
