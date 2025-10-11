@@ -73,4 +73,24 @@ test.describe('Jira Force Start API Tests', () => {
         const responseBody = await response.json();
         expect(responseBody.message).toBe('Missing keys.');
     });
+
+    test('should return 400 for invalid key types', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: [123, true], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('All keys must be strings.');
+    });
+
+    test('should return 400 for malformed user object', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: ['AVNZ-1'], user: null },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('User object is required.');
+    });
 });
