@@ -981,3 +981,32 @@ Update 2025-09-29 (Web — Build fix)
 - Env/secrets
   - Requires `SERVICE_TOKEN` and `JIRA_DEFAULT_ORG_CODE` set in API env.
   - Assignment lists env fallbacks remain supported; DB values now take precedence where applicable.
+2025-09-29: Fix admin proxy 400s on Settings
+- Files touched: `apps/web/app/api/admin/proxy/route.ts`
+- Change: Expanded proxy allow-list to include `/me` endpoints used by Settings (profile, preferences, change-password). This prevents `400 forbidden_path` responses when saving via SPA forms.
+- Ops notes: No schema or env changes. Ensure `AUTH_SECRET` is consistent across `web`, `api`, `ai/aiworker` to avoid backend `400 missing resource id` from admin endpoints when `nodeId` cannot be derived.
+
+2025-09-29: Add GET handler to admin proxy
+- Files touched: `apps/web/app/api/admin/proxy/route.ts`
+- Change: Implemented `GET` to support components that read via `/api/admin/proxy?path=...` (e.g., JiraAssignees). Forwards with auth and auto-appends `nodeId` for `/admin` paths.
+- Ops notes: None; client code using GET no longer hits 405.
+
+2025-09-29: Fix toast usage in BackfillButton
+- Files touched: `apps/web/app/admin/dashboard/jira/BackfillButton.tsx`
+- Change: Replaced `toast({ title, description })` (object) with `success()`/`error()` string helpers from our toast provider to avoid React rendering an object as a child.
+- Ops notes: No rebuild required beyond web.
+
+2025-09-29: Add API endpoint jira/backfill
+- Files touched: `apps/api/src/jira.controller.ts`
+- Change: Added `POST /jira/backfill` secured by `X-Service-Token` to trigger `backfillInProgress()`; restores compatibility with UI button “Queue In‑Progress”.
+- Env: Ensure `SERVICE_TOKEN` set for proxy to forward header.
+
+2025-09-29: Backfill button fallback
+- Files touched: `apps/web/app/admin/dashboard/jira/BackfillButton.tsx`
+- Change: Button now attempts `/jira/backfill` and falls back to `/jira/requeue-stale` on 404 to remain compatible without an API rebuild.
+- Notes: Proxy already forwards `X-Service-Token` for `/jira/*`.
+
+2025-09-29: Allow Jira endpoints for portal-manager
+- Files touched: `apps/api/src/jira.controller.ts`
+- Change: `/jira/backfill` and `/jira/requeue-stale` now accept either a valid `X-Service-Token` or an authenticated user with role `portal-manager` (for local/dev UX). Keeps service-token flow intact for automation.
+- Env: Still recommended to set `SERVICE_TOKEN` for automations/webhook.

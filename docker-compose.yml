@@ -149,6 +149,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
       DEMO_USERS: ${DEMO_USERS:-}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      SERVICE_TOKEN: ${SERVICE_TOKEN:-}
     ports: ["3000:3000"]
     volumes:
       - ./apps/web:/app

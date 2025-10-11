@@ -7,14 +7,18 @@ import { useToast } from '@/components/ui/toast-provider'
 export default function BackfillButton(){
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { toast } = useToast?.() || { toast: (o:any)=> alert(o?.title||'Done') }
+  const { success, error } = useToast()
   async function run(){
     setLoading(true)
     try{
-      const body = { path:'/jira/backfill', method:'POST' }
-      const r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) })
+      // Try new backfill endpoint; fallback to legacy requeue-stale if not found
+      let r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/jira/backfill', method:'POST' }) })
+      if (r.status === 404) {
+        r = await fetch('/api/admin/proxy', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ path:'/jira/requeue-stale', method:'POST' }) })
+      }
       const j = await r.json().catch(()=>({ ok:false }))
-      toast({ title: j.ok? 'Queued In‑Progress' : 'Backfill completed', description: j.ok? undefined : JSON.stringify(j) })
+      if (j?.ok) success('Queued In‑Progress')
+      else error('Unable to queue; check JIRA config')
       router.refresh()
     } finally { setLoading(false) }
   }

@@ -8,7 +8,8 @@ export default function JiraStaleBadge({ minutes = 30 }: { minutes?: number }){
     let alive = true
     async function load(){
       try {
-        const r = await fetch(`/jira/stale?minutes=${minutes}`, { cache: 'no-store' })
+        const base = process.env.NEXT_PUBLIC_API_BASE || ''
+        const r = await fetch(`${base}/jira/stale?minutes=${minutes}`, { cache: 'no-store' })
         const d = await r.json().catch(()=>({ issues: [] }))
         const c = Array.isArray(d?.issues) ? d.issues.length : 0
         if (alive) setCount(c)
@@ -21,4 +22,3 @@ export default function JiraStaleBadge({ minutes = 30 }: { minutes?: number }){
   if (count == null || count === 0) return null
   return <Badge variant="secondary" className="ml-2">{count}</Badge>
 }
-

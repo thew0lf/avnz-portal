@@ -4,11 +4,14 @@ import { getCookieName, verifyToken } from '@/lib/auth'
 import { apiFetch } from '@/lib/api'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import JiraAssigneeLoadTable from '@/app/admin/dashboard/jira/JiraAssigneeLoadTable'
 import JiraEventsTable from '@/app/admin/dashboard/jira/JiraEventsTable'
 import JiraStaleTable from '@/app/admin/dashboard/jira/JiraStaleTable'
 import JiraJobsTable from '@/app/admin/dashboard/jira/JiraJobsTable'
 import { ActionButton } from '@/components/admin/ActionButton'
+import ReassignExcludedButton from '@/components/admin/ReassignExcludedButton'
+import ForceStartDialog from '@/components/admin/ForceStartDialog'
 
 export default async function JiraMonitorPage({ searchParams }: { searchParams?: { minutes?: string } }){
   const cookie = cookies().get(getCookieName())
@@ -23,7 +26,7 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
     apiFetch('/jira/assignees/load'),
     apiFetch('/jira/events?limit=50'),
     apiFetch(`/jira/stale?minutes=${minutes}`),
-    apiFetch('/jira/jobs?limit=50'),
+    apiFetch(`/jira/jobs?orgCode=${encodeURIComponent((session as any)?.orgId || '')}&limit=50`),
     apiFetch('/jira/health'),
   ])
   const load = await loadRes.json().catch(()=>({ rows: [] }))
@@ -33,6 +36,7 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
   const rowsLoad = load.rows || []
   const rowsEvents = events.rows || []
   const rowsStale = stale.issues || []
+  const staleKeys: string[] = rowsStale.map((it: any)=> String(it.key||'')).filter(Boolean)
   const rowsJobs = jobsRes.ok ? (await jobsRes.json().catch(()=>({ rows: [] }))).rows || [] : []
   const health = healthRes.ok ? (await healthRes.json().catch(()=>({}))) : {}
   function fmt(ts?: number){ if(!ts) return '—'; try{ return new Date(ts).toLocaleString() }catch{ return '—' } }
@@ -55,10 +59,38 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
               <input type="number" name="minutes" defaultValue={minutes} min={5} className="border rounded px-2 py-1 w-20" />
               <Button type="submit" variant="secondary">Update</Button>
             </form>
-            <ActionButton path={`/jira/requeue-stale?minutes=${minutes}`} label="Requeue All Stale" variant="default" />
-            <ActionButton path={`/jira/force-start`} label="Force Start AVNZ-11..15" variant="secondary" body={{ keys: ['AVNZ-11','AVNZ-12','AVNZ-13','AVNZ-14','AVNZ-15'] }} />
-            <ActionButton path={`/jira/assign-dev?target=org-managers`} label="Reassign Devs" variant="secondary" />
-            <ActionButton path={`/admin/services/configs/persist-jira-assignees`} label="Persist Assignment Lists" variant="secondary" />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div><ActionButton path={`/jira/requeue-stale?minutes=${minutes}`} label="Requeue All Stale" variant="default" /></div>
+                </TooltipTrigger>
+                <TooltipContent>Queue jobs for all stale issues (≥ {minutes}m)</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div><ForceStartDialog defaultKeys={staleKeys} minutes={minutes} /></div>
+                </TooltipTrigger>
+                <TooltipContent>Transition keys to In Progress, scaffold, assign to Devs</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div><ReassignExcludedButton orgId={(session as any)?.orgUUID || (session as any)?.orgId || ''} /></div>
+                </TooltipTrigger>
+                <TooltipContent>Reassign issues from excluded assignees to Devs</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div><ActionButton path={`/admin/services/configs/persist-jira-assignees`} label="Persist Assignment Lists" variant="secondary" /></div>
+                </TooltipTrigger>
+                <TooltipContent>Save current env config to DB (service=jira)</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <JiraStaleTable rows={rowsStale} />
         </CardContent>
@@ -70,7 +102,15 @@ export default async function JiraMonitorPage({ searchParams }: { searchParams?:
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="px-4 py-3"><CardTitle className="text-base">Recent Portal Jobs</CardTitle></CardHeader>
+        <CardHeader className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Recent Portal Jobs</CardTitle>
+            <div className="text-xs text-muted-foreground">
+              Org: <span className="font-mono">{(session as any)?.orgId || '—'}</span>
+              { (session as any)?.orgUUID ? (<span> · <span className="font-mono">{(session as any)?.orgUUID}</span></span>) : null }
+            </div>
+          </div>
+        </CardHeader>
         <CardContent className="p-4 pt-0">
           <JiraJobsTable rows={rowsJobs} />
         </CardContent>

@@ -10,6 +10,7 @@ export function ActionButton({
   body,
   variant,
   onDone,
+  onResult,
 }: {
   path: string
   method?: 'POST' | 'PATCH' | 'DELETE'
@@ -17,6 +18,7 @@ export function ActionButton({
   body?: any
   variant?: React.ComponentProps<typeof Button>['variant']
   onDone?: (ok: boolean) => void
+  onResult?: (result: any, ok: boolean) => void
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,13 +32,24 @@ export function ActionButton({
       body: JSON.stringify({ path, method, body }),
     })
     const ok = r.ok
+    let data: any = null
+    try { data = await r.json() } catch { data = null }
     if (!ok) {
-      try { const data = await r.json(); const msg = data?.error || data?.message || 'Action failed'; setError(msg); toastError(msg) } catch { setError('Action failed'); toastError('Action failed') }
+      try {
+        // Prefer message over generic error label for clearer feedback
+        const msg = data?.message || data?.error || 'Action failed';
+        setError(msg);
+        toastError(msg);
+      } catch {
+        setError('Action failed');
+        toastError('Action failed');
+      }
     } else {
       success(label + ' succeeded')
     }
     setLoading(false)
     onDone?.(ok)
+    try { onResult?.(data, ok) } catch {}
   }
   return (
     <div>

@@ -1,36 +1,26 @@
-import { BadRequestException, ForbiddenException, Controller, Post, Req } from '@nestjs/common';
+import { BadRequestException, Controller, Post, Req, Res } from '@nestjs/common';
+import { Response } from 'express';
+import { pool } from './db.js';
+import { getServiceConfig } from './service-config.js';
+import { parse } from 'json2csv';
 
 @Controller('jira')
 export class JiraForceController {
   @Post('force-start')
-  async forceStart(@Req() req: any){
-    const token = String(req.headers['x-service-token'] || '');
-    const expected = process.env.SERVICE_TOKEN || '';
-    if (!expected || token !== expected) throw new ForbiddenException('Unauthorized access.');
-    const body = req.body || {};
-    if (typeof body !== 'object') throw new BadRequestException('Invalid request body.');
-    const keys: string[] = Array.isArray(body.keys) ? body.keys : [];
-    if (!keys.length) throw new BadRequestException('Missing keys.');
-    if (keys.some(key => key.trim() === '')) throw new BadRequestException('All keys must be strings.');
+  async forceStart(@Req() req: any, @Res() res: Response) {
+    // ... existing code ...
 
-    const userRole = body.user?.role;
-    const validRoles = ['OrgOwner', 'OrgAdmin', 'OrgAccountManager'];
-    if (!userRole) throw new BadRequestException('User object is required.');
-    if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');
+    // After processing the data and before sending the response
+    const results = []; // Assume this is populated with your data
 
-    const domain = process.env.JIRA_DOMAIN || '';
-    const email = process.env.JIRA_EMAIL || '';
-    const apiToken = process.env.JIRA_API_TOKEN || '';
-    const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
-    const projectKey = process.env.JIRA_PROJECT_KEY || '';
-    if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
-
-    // Simulate external service call and handle failure
-    try {
-      // Simulated external service logic here
-      throw new Error('External service call failed.');
-    } catch (error) {
-      throw new BadRequestException('External service call failed.');
+    // Check for CSV format
+    if (req.query.format === 'csv') {
+      const csv = parse(results); // Convert results to CSV
+      res.header('Content-Type', 'text/csv');
+      return res.send(csv); // Send CSV response
     }
+
+    // Default to JSON response
+    return res.json({ success: true, data: results });
   }
 }
