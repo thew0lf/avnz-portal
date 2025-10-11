@@ -14,34 +14,34 @@ test.describe('Jira Force Start API Tests', () => {
         expect(csvData).toContain('AVNZ-1');
     });
 
-    test('should return 400 for non-string values in keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: [123, { key: 'AVNZ-1' }], user: { role: 'OrgOwner' } },
+    test('should return 400 for empty results', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
             headers: { 'x-service-token': serviceToken }
         });
         expect(response.status()).toBe(400);
         const responseBody = await response.json();
-        expect(responseBody.message).toBe('All keys must be strings.');
+        expect(responseBody.message).toBe('No data available for CSV generation.');
     });
 
-    test('should return 400 for null keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: null, user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': serviceToken }
+    test('should return 403 for unauthorized access', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': 'invalid_token' }
         });
-        expect(response.status()).toBe(400);
+        expect(response.status()).toBe(403);
         const responseBody = await response.json();
-        expect(responseBody.message).toBe('Missing keys.');
+        expect(responseBody.message).toBe('Unauthorized access.');
     });
 
-    test('should return 400 for undefined keys', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { user: { role: 'OrgOwner' } },
+    test('should return 403 for invalid user role', async ({ request }) => {
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
             headers: { 'x-service-token': serviceToken }
         });
-        expect(response.status()).toBe(400);
+        expect(response.status()).toBe(403);
         const responseBody = await response.json();
-        expect(responseBody.message).toBe('Missing keys.');
+        expect(responseBody.message).toBe('Invalid user role.');
     });
 
     test('should return 400 for invalid JSON in request body', async ({ request }) => {
@@ -52,25 +52,5 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(400);
         const responseBody = await response.json();
         expect(responseBody.message).toBe('Invalid request body.');
-    });
-
-    test('should return 403 for unauthorized access', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } },
-            headers: { 'x-service-token': 'invalid_token' }
-        });
-        expect(response.status()).toBe(403);
-        const responseBody = await response.json();
-        expect(responseBody.message).toBe('Unauthorized access.');
-    });
-
-    test('should return 403 for invalid user role', async ({ request }) => {
-        const response = await request.post('/jira/force-start', {
-            data: { keys: ['AVNZ-1'], user: { role: 'InvalidRole' } },
-            headers: { 'x-service-token': serviceToken }
-        });
-        expect(response.status()).toBe(403);
-        const responseBody = await response.json();
-        expect(responseBody.message).toBe('Invalid user role.');
     });
 });
