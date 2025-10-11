@@ -22,6 +22,13 @@ describe('JiraForceController', () => {
         expect(res.send).toHaveBeenCalled();
     });
 
+    it('should throw BadRequestException for empty results', async () => {
+        const req = { query: { format: 'csv' }, body: { keys: [], user: { role: 'OrgOwner' } }, headers: { 'x-service-token': 'mock_service_token' } };
+        const res = { send: jest.fn(), header: jest.fn() };
+
+        await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw ForbiddenException for unauthorized access', async () => {
         const req = { query: { format: 'csv' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } }, headers: { 'x-service-token': 'invalid_token' } };
         const res = { send: jest.fn(), header: jest.fn() };
