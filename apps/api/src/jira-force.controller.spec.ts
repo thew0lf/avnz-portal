@@ -44,4 +44,11 @@ describe('JiraForceController', () => {
 
         await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw BadRequestException for invalid JSON body', async () => {
+        const req = { query: { format: 'csv' }, body: 'invalid_json', headers: { 'x-service-token': 'mock_service_token' } };
+        const res = { send: jest.fn(), header: jest.fn() };
+
+        await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
+    });
 });
