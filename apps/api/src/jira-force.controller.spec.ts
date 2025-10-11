@@ -23,11 +23,12 @@ describe('JiraForceController', () => {
         expect(res.send).toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException for empty results array when format is csv', async () => {
+    it('should return empty CSV for empty results array when format is csv', async () => {
         const req = { query: { format: 'csv' }, body: { keys: ['AVNZ-1'], user: { role: 'OrgOwner' } }, headers: { 'x-service-token': 'mock_service_token' } };
         const res = { send: jest.fn(), header: jest.fn() };
 
-        await expect(controller.forceStart(req, res)).rejects.toThrow(BadRequestException);
+        await controller.forceStart(req, res);
+        expect(res.send).toHaveBeenCalledWith('');
     });
 
     it('should throw ForbiddenException for unauthorized access', async () => {
