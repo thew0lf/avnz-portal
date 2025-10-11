@@ -1,9 +1,11 @@
-import { BadRequestException, ForbiddenException, Controller, Post, Req } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Controller, Post, Req, Res } from '@nestjs/common';
+import { Response } from 'express';
+import { parse } from 'json2csv';
 
 @Controller('jira')
 export class JiraForceController {
   @Post('force-start')
-  async forceStart(@Req() req: any){
+  async forceStart(@Req() req: any, @Res() res: Response) {
     const token = String(req.headers['x-service-token'] || '');
     const expected = process.env.SERVICE_TOKEN || '';
     if (!expected || token !== expected) throw new ForbiddenException('Unauthorized access.');
@@ -18,19 +20,16 @@ export class JiraForceController {
     if (!userRole) throw new BadRequestException('User object is required.');
     if (!validRoles.includes(userRole)) throw new ForbiddenException('Invalid user role.');
 
-    const domain = process.env.JIRA_DOMAIN || '';
-    const email = process.env.JIRA_EMAIL || '';
-    const apiToken = process.env.JIRA_API_TOKEN || '';
-    const orgCode = process.env.JIRA_DEFAULT_ORG_CODE || '';
-    const projectKey = process.env.JIRA_PROJECT_KEY || '';
-    if (!domain || !email || !apiToken || !orgCode || !projectKey) throw new BadRequestException('Missing required JIRA environment variables.');
+    const results = []; // Assume this is populated with your data
 
-    // Simulate external service call and handle failure
-    try {
-      // Simulated external service logic here
-      throw new Error('External service call failed.');
-    } catch (error) {
-      throw new BadRequestException('External service call failed.');
+    // Check for CSV format
+    if (req.query.format === 'csv') {
+      const csv = parse(results); // Convert results to CSV
+      res.header('Content-Type', 'text/csv');
+      return res.send(csv); // Send CSV response
     }
+
+    // Default to JSON response
+    return res.json({ success: true, data: results });
   }
 }
