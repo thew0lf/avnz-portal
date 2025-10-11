@@ -11,7 +11,7 @@ test.describe('Jira Force Start API Tests', () => {
         expect(response.status()).toBe(200);
         expect(response.headers()['content-type']).toContain('text/csv');
         const csvData = await response.text();
-        expect(csvData).toContain('AVNZ-1'); // Validate CSV content as needed
+        expect(csvData).toContain('AVNZ-1');
     });
 
     test('should return 400 for non-string values in keys', async ({ request }) => {

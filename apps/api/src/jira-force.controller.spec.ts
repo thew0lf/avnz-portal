@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JiraForceController } from './jira-force.controller';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { parse } from 'json2csv'; // Import for CSV validation
+import { parse } from 'json2csv';
 
 describe('JiraForceController', () => {
     let controller: JiraForceController;
@@ -20,7 +20,7 @@ describe('JiraForceController', () => {
 
         await controller.forceStart(req, res);
         expect(res.header).toHaveBeenCalledWith('Content-Type', 'text/csv');
-        expect(res.send).toHaveBeenCalled(); // You can further validate the CSV content if needed
+        expect(res.send).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for empty results array when format is csv', async () => {
