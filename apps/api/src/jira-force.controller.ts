@@ -24,7 +24,7 @@ export class JiraForceController {
 
     // Check for CSV format
     if (req.query.format === 'csv') {
-      if (results.length === 0) return res.send(''); // Return empty CSV instead of throwing an exception
+      if (results.length === 0) throw new BadRequestException('No data available for CSV generation.');
       const csv = parse(results); // Convert results to CSV
       res.header('Content-Type', 'text/csv');
       return res.send(csv); // Send CSV response
