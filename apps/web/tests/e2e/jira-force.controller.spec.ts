@@ -52,4 +52,24 @@ test.describe('Jira Force Start API Tests', () => {
         const responseBody = await response.json();
         expect(responseBody.message).toBe('Missing keys.');
     });
+
+    test('should return 400 for invalid characters in keys', async ({ request }) => {
+        const response = await request.post('/jira/force-start', {
+            data: { keys: ['AVNZ-1!@#'], user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(400);
+        const responseBody = await response.json();
+        expect(responseBody.message).toBe('All keys must be strings.');
+    });
+
+    test('should handle large datasets for CSV generation', async ({ request }) => {
+        const largeKeys = Array.from({ length: 1000 }, (_, i) => `AVNZ-${i + 1}`);
+        const response = await request.post('/jira/force-start?format=csv', {
+            data: { keys: largeKeys, user: { role: 'OrgOwner' } },
+            headers: { 'x-service-token': serviceToken }
+        });
+        expect(response.status()).toBe(200);
+        expect(response.headers()['content-type']).toContain('text/csv');
+    });
 });
